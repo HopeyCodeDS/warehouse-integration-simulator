@@ -1,0 +1,27 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: wis-postgres
+    environment:
+      POSTGRES_USER: wis_user
+      POSTGRES_PASSWORD: wis_password
+      POSTGRES_DB: warehouse_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - wis-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  wis-network:
+    driver: bridge
