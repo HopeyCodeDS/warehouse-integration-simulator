@@ -1,0 +1,21 @@
+# Environment and OS files
+.env
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node/React (for later)
+node_modules/
+build/
+
+# IDEs
+.vscode/
+.idea/
+
+# Docker volumes
+postgres_data/
