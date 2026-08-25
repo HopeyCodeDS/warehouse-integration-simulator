@@ -1,20 +1,32 @@
-# docker-compose.yml
-version: '3.8'
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: wis-postgres
-    environment:
-      POSTGRES_USER: wis_user
-      POSTGRES_PASSWORD: wis_password
-      POSTGRES_DB: warehouse_db
+    env_file:
+      - .env
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/01_schemas.sql:/docker-entrypoint-initdb.d/01_schemas.sql
+      - ./database/02_erp_schema.sql:/docker-entrypoint-initdb.d/02_erp_schema.sql
+      - ./database/03_wms_schema.sql:/docker-entrypoint-initdb.d/03_wms_schema.sql
+      - ./database/04_integration_schema.sql:/docker-entrypoint-initdb.d/04_integration_schema.sql
+      - ./database/05_seed_data.sql:/docker-entrypoint-initdb.d/05_seed_data.sql
+    networks:
+      - wis-network
+    restart: unless-stopped
+
+  erp-api:
+    build: ./services/erp-api
+    container_name: wis-erp-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
     networks:
       - wis-network
     restart: unless-stopped
