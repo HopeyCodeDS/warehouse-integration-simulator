@@ -34,7 +34,6 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
 
     # 3. Create Order Items
     for item in order.items:
-        # Optional: verify product SKU exists in ERP master data here
         new_item = models.OrderItem(
             order_id=new_order.id,
             product_sku=item.product_sku,
@@ -54,7 +53,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
         destination="Integration_Engine",
         event_type="ORDER_CREATED",
         payload=event_payload,
-        status="SUCCESS"
+        status="PENDING"
     )
     db.add(integration_event)
 
