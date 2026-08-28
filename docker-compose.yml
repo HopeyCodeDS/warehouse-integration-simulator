@@ -37,8 +37,13 @@ services:
       - "8001:8001"
     env_file:
       - .env
+    environment:
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - PYTHONUNBUFFERED=1
     depends_on:
       - postgres
+      - mqtt-broker
     networks:
       - wis-network
     restart: unless-stopped
@@ -54,6 +59,17 @@ services:
     depends_on:
       - postgres
       - wms-api
+    networks:
+      - wis-network
+    restart: unless-stopped
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    container_name: wis-mqtt-broker
+    ports:
+      - "1883:1883"    # MQTT protocol port
+      - "9001:9001"    # WebSocket port (for future React dashboard)
+    volumes:
+      - ./services/mqtt-broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
     networks:
       - wis-network
     restart: unless-stopped
