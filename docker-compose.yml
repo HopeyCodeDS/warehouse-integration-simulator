@@ -91,6 +91,31 @@ services:
       - wis-network
     restart: unless-stopped
 
+  opcua-plc-simulator:
+    build: ./services/opcua-plc-simulator
+    container_name: wis-opcua-plc
+    ports:
+      - "4840:4840" # Standard OPC UA port
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - wis-network
+    restart: unless-stopped
+
+  opcua-gateway:
+    build: ./services/opcua-gateway
+    container_name: wis-opcua-gateway
+    environment:
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - opcua-plc-simulator
+      - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
 
