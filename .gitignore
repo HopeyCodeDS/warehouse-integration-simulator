@@ -11,7 +11,7 @@ __pycache__/
 .venv/
 venv/
 
-# Node/React (for later)
+# Node/React
 node_modules/
 build/
 
