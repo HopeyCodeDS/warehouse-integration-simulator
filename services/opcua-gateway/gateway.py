@@ -21,7 +21,7 @@ class MySubHandler(SubHandler):
     """
     First Principle: Event-Driven OT.
     We don't poll the PLC. We subscribe to changes.
-    NOTE: datachange_notification is SYNCHRONOUS — no await allowed here.
+    Datachange_notification is SYNCHRONOUS — no await allowed here.
     """
     def datachange_notification(self, node, val, data):
         
