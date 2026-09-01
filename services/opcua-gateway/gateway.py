@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import json
+import uuid
 import os
 import paho.mqtt.client as mqtt
 from asyncua import Client
@@ -32,7 +33,8 @@ class MySubHandler(SubHandler):
             message = {
                 "event": "PALLET_ARRIVED",
                 "location": "Dock-3",
-                "source": "PLC_Conveyor1"
+                "source": "PLC_Conveyor1",
+                "correlation_id": str(uuid.uuid4()),
             }
             mqtt_client.publish("warehouse/events/sensor", json.dumps(message))
             logger.info("[Gateway] 📡 Published MQTT event: PALLET_ARRIVED")

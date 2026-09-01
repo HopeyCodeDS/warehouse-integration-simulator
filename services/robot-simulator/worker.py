@@ -15,6 +15,7 @@ STATE_DOCKED = "DOCKED"
 
 current_state = STATE_IDLE
 current_task = None
+current_correlation = None
 
 # --- 3. MQTT Callbacks ---
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -23,29 +24,34 @@ def on_connect(client, userdata, flags, rc, properties=None):
     client.subscribe("warehouse/tasks/new")
 
 def on_message(client, userdata, msg):
-    global current_state, current_task
+    global current_state, current_task, current_correlation
     
     try:
         payload = json.loads(msg.payload.decode())
         print(f"[{ROBOT_ID}] 📡 Received task: {payload['task_type']} for Order {payload['order_number']}")
+
+        # Extract correlation_id from the incoming task
+        correlation_id = payload.get("correlation_id")
         
         # First Principle: State Validation. Only accept tasks if IDLE.
         if current_state == STATE_IDLE:
             current_task = payload
+            current_correlation = correlation_id
             current_state = STATE_MOVING
-            publish_state(client, STATE_MOVING, current_task['order_number'])
+            publish_state(client, STATE_MOVING, current_task['order_number'], current_correlation)
         else:
             print(f"[{ROBOT_ID}] ⚠️ Ignored task. Robot is currently {current_state}")
     except Exception as e:
         print(f"[{ROBOT_ID}] ❌ Error processing message: {e}")
 
 # --- 4. Telemetry Publisher ---
-def publish_state(client, state, order_number=None):
+def publish_state(client, state, order_number=None, correlation=None):
     """Publishes the robot's current physical state to the MQTT broker."""
     message = {
         "robot_id": ROBOT_ID,
         "state": state,
         "order_number": order_number,
+        "correlation_id": correlation,
         "timestamp": time.time()
     }
     # First Principle: Telemetry. We publish to a dedicated state topic.
@@ -54,7 +60,7 @@ def publish_state(client, state, order_number=None):
 
 # --- 5. The Main Loop (Simulating Physics/Time) ---
 def main():
-    global current_state, current_task
+    global current_state, current_task, current_correlation
     
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=ROBOT_ID)
     client.on_connect = on_connect
@@ -64,7 +70,9 @@ def main():
     client.loop_start() # Starts background network thread
     
     print(f"🤖 {ROBOT_ID} Simulator started. Waiting for tasks...")
-    publish_state(client, STATE_IDLE) # Announce we are online
+
+    # Announce we are online (no correlation yet since we are idle)
+    publish_state(client, STATE_IDLE, correlation=None) 
     
     try:
         while True:
@@ -73,14 +81,15 @@ def main():
                 time.sleep(3)
                 
                 current_state = STATE_DOCKED
-                publish_state(client, STATE_DOCKED, current_task['order_number'])
-                
+                publish_state(client, STATE_DOCKED, current_task['order_number'], current_correlation)
+
                 print(f"[{ROBOT_ID}] 📦 Unloading at dock... (simulating 2 seconds)")
                 time.sleep(2)
                 
                 current_state = STATE_IDLE
                 current_task = None
-                publish_state(client, STATE_IDLE)
+                current_correlation = None
+                publish_state(client, STATE_IDLE, correlation=None)
                 
             time.sleep(1) # Main loop sleep
             

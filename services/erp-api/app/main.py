@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from .database import engine, get_db, Base
 from . import models, schemas
 import json
+import uuid
 
 
 app = FastAPI(
@@ -42,7 +43,9 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
         db.add(new_item)
 
     # 4. Log the Integration Event
+    correlation_id = str(uuid.uuid4())
     event_payload = json.dumps({
+        "correlation_id": correlation_id,
         "order_number": order.order_number,
         "customer": order.customer,
         "items_count": len(order.items)

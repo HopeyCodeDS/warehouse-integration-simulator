@@ -40,6 +40,7 @@ def shutdown_event():
 class TaskCreate(BaseModel):
     order_number: str
     task_type: str
+    correlation_id: str | None = None
     payload: dict
 
 @app.get("/health")
@@ -65,6 +66,7 @@ def receive_task(task_data: TaskCreate, db: Session = Depends(get_db)):
     mqtt_topic = "warehouse/tasks/new"
     mqtt_message = {
         "task_id": str(new_task.id),
+        "correlation_id": task_data.correlation_id,
         "order_number": new_task.order_number,
         "task_type": new_task.task_type,
         "payload": new_task.payload,

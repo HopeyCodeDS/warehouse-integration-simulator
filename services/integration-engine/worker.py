@@ -52,6 +52,7 @@ def process_events():
                 wms_payload = {
                     "order_number": erp_data["order_number"],
                     "task_type": "PICK_AND_MOVE",
+                    "correlation_id": erp_data.get("correlation_id"),
                     "payload": {
                         "customer": erp_data["customer"],
                         "items_count": erp_data["items_count"],
