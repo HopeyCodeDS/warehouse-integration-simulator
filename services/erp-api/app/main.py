@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from .database import engine, get_db, Base
 from . import models, schemas
@@ -10,6 +11,15 @@ app = FastAPI(
     title="WIS ERP API",
     description="Simulates an Enterprise Resource Planning system for the Warehouse Integration Simulator.",
     version="1.0.0"
+)
+
+# First Principle: We explicitly trust the React frontend to send commands.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/health", tags=["System"])
