@@ -14,3 +14,17 @@ class Task(Base):
     status = Column(String, default="PENDING")
     payload = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Location(Base):
+    __tablename__ = "locations"
+    __table_args__ = {'schema': 'wms'}
+    id = Column(UUID(as_uuid=True), primary_key=True)
+    name = Column(String)
+
+class Inventory(Base):
+    __tablename__ = "inventory"
+    __table_args__ = {'schema': 'wms'}
+    id = Column(UUID(as_uuid=True), primary_key=True)
+    product_sku = Column(String, nullable=False)
+    location_id = Column(UUID(as_uuid=True))
+    quantity = Column(Integer, nullable=False)

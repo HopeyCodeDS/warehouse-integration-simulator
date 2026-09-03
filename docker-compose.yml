@@ -56,6 +56,9 @@ services:
     environment:
       - WMS_API_URL=http://wms-api:8001/api/tasks
       - PYTHONUNBUFFERED=1 
+      - ERP_API_URL=http://erp-api:8000/api/orders
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
     depends_on:
       - postgres
       - wms-api
@@ -68,7 +71,7 @@ services:
     container_name: wis-mqtt-broker
     ports:
       - "1883:1883"    # MQTT protocol port
-      - "9001:9001"    # WebSocket port (for future React dashboard)
+      - "9001:9001"    # WebSocket port (for React dashboard)
     volumes:
       - ./services/mqtt-broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
     networks:
