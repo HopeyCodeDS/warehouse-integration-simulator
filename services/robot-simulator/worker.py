@@ -90,6 +90,14 @@ def main():
                 current_task = None
                 current_correlation = None
                 publish_state(client, STATE_IDLE, correlation=None)
+
+                # Physical work done -> publish the receipt the WMS waits for
+                client.publish("warehouse/tasks/completed", json.dumps({
+                    "task_id": current_task.get("task_id"),
+                    "order_number": current_task.get("order_number"),
+                    "correlation_id": current_task.get("correlation_id"),
+                }), qos=1)
+                print(f"[{ROBOT_ID}]  Published task completion receipt")
                 
             time.sleep(1) # Main loop sleep
             

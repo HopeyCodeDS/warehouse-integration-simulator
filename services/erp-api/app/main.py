@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from .database import engine, get_db, Base
 from . import models, schemas
 import json
@@ -11,6 +13,19 @@ app = FastAPI(
     description="Simulates an Enterprise Resource Planning system for the Warehouse Integration Simulator.",
     version="1.0.0"
 )
+
+# First Principle: We explicitly trust the React frontend to send commands.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# ----------------------
+
+class OrderStatusUpdate(BaseModel):
+    status: str
 
 @app.get("/health", tags=["System"])
 def health_check():
@@ -34,6 +49,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     db.flush() # Flush to get the new_order.id
 
     # 3. Create Order Items
+    items_payload = []
     for item in order.items:
         new_item = models.OrderItem(
             order_id=new_order.id,
@@ -41,6 +57,14 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
             requested_qty=item.requested_qty
         )
         db.add(new_item)
+        items_payload.append({"sku": item.product_sku, "qty": item.requested_qty})
+
+    event_payload = json.dumps({
+        "correlation_id": correlation_id,
+        "order_number": order.order_number,
+        "customer": order.customer,
+        "items": items_payload,   # the WMS can now decrement what it can identify
+    })
 
     # 4. Log the Integration Event
     correlation_id = str(uuid.uuid4())
@@ -72,3 +96,12 @@ def get_order(order_number: str, db: Session = Depends(get_db)):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
+
+@app.patch("/api/orders/{order_number}/status", tags=["Orders"])
+def update_order_status(order_number: str, body: OrderStatusUpdate, db: Session = Depends(get_db)):
+    order = db.query(models.Order).filter(models.Order.order_number == order_number).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order.status = body.status
+    db.commit()
+    return {"order_number": order_number, "status": order.status}
