@@ -54,7 +54,7 @@ function App() {
     return () => client.end();
   }, []);
 
-  // --- THE COMMAND: Dispatch Order ---
+  // --- Dispatch Order ---
   const handleDispatch = async (e) => {
     e.preventDefault();
     setIsDispatching(true);
@@ -95,7 +95,7 @@ function App() {
       source,
       msg: typeof msg === 'object' ? JSON.stringify(msg) : msg
     };
-    setLiveLogs(prev => [newLog, ...prev].slice(0, 20)); 
+    setLiveLogs(prev => [...prev, newLog].slice(-100));
   };
 
   const styles = {
@@ -106,8 +106,10 @@ function App() {
     statusGreen: { color: '#4caf50', fontWeight: 'bold' },
     statusRed: { color: '#f44336', fontWeight: 'bold' },
     statusYellow: { color: '#ffeb3b', fontWeight: 'bold' },
-    logContainer: { backgroundColor: '#000', padding: '15px', borderRadius: '4px', height: '300px', overflowY: 'scroll', fontSize: '12px' },
-    logEntry: { marginBottom: '5px', borderBottom: '1px solid #222', paddingBottom: '5px' },
+    logContainer: { backgroundColor: '#000', padding: '18px', borderRadius: '4px', minHeight: '420px', height: '62vh', maxHeight: '760px', overflowY: 'auto', fontSize: '13px', lineHeight: '1.55' },
+    logEntry: { display: 'grid', gridTemplateColumns: '92px minmax(190px, 280px) 1fr', gap: '10px', marginBottom: '8px', borderBottom: '1px solid #222', paddingBottom: '8px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' },
+    monitorHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginTop: '8px' },
+    clearButton: { backgroundColor: 'transparent', color: '#aaa', border: '1px solid #555', borderRadius: '4px', padding: '7px 12px', cursor: 'pointer', fontFamily: 'monospace' },
     
     // Command Center Styles
     formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' },
@@ -186,7 +188,12 @@ function App() {
         </div>
       </div>
 
-      <h3>📡 Live Integration Monitor</h3>
+      <div style={styles.monitorHeader}>
+        <h3>📡 Live Integration Monitor</h3>
+        <button type="button" style={styles.clearButton} onClick={() => setLiveLogs([])}>
+          Clear logs
+        </button>
+      </div>
       <div style={styles.logContainer}>
         {liveLogs.map((log, idx) => (
           <div key={idx} style={styles.logEntry}>

@@ -86,6 +86,7 @@ def main():
                 print(f"[{ROBOT_ID}] 📦 Unloading at dock... (simulating 2 seconds)")
                 time.sleep(2)
                 
+                completed_task = current_task
                 current_state = STATE_IDLE
                 current_task = None
                 current_correlation = None
@@ -93,9 +94,9 @@ def main():
 
                 # Physical work done -> publish the receipt the WMS waits for
                 client.publish("warehouse/tasks/completed", json.dumps({
-                    "task_id": current_task.get("task_id"),
-                    "order_number": current_task.get("order_number"),
-                    "correlation_id": current_task.get("correlation_id"),
+                    "task_id": completed_task.get("task_id"),
+                    "order_number": completed_task.get("order_number"),
+                    "correlation_id": completed_task.get("correlation_id"),
                 }), qos=1)
                 print(f"[{ROBOT_ID}]  Published task completion receipt")
                 
