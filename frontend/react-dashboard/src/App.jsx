@@ -54,7 +54,7 @@ function App() {
     return () => client.end();
   }, []);
 
-  // --- Dispatch Order ---
+  // --- THE COMMAND: Dispatch Order ---
   const handleDispatch = async (e) => {
     e.preventDefault();
     setIsDispatching(true);

@@ -22,10 +22,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# ----------------------
-
-class OrderStatusUpdate(BaseModel):
-    status: str
 
 @app.get("/health", tags=["System"])
 def health_check():
