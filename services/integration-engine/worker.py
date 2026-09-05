@@ -48,7 +48,10 @@ def process_order_created(event, db):
         "task_type": "PICK_AND_MOVE",
         "correlation_id": erp_data.get("correlation_id"),
         "items": erp_data.get("items", []),
-        "payload": {"customer": erp_data.get("customer"), "destination": "Dock-3"},
+        "payload": {
+            "customer": erp_data.get("customer"),
+            "destination_dock": erp_data.get("destination_dock"),
+        },
     }
     response = requests.post(settings.WMS_API_URL, json=wms_payload, timeout=5)
     if response.status_code == 201:

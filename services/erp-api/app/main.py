@@ -58,22 +58,16 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
         db.add(new_item)
         items_payload.append({"sku": item.product_sku, "qty": item.requested_qty})
 
-    event_payload = json.dumps({
-        "correlation_id": correlation_id,
-        "order_number": order.order_number,
-        "customer": order.customer,
-        "items": items_payload,   # the WMS can now decrement what it can identify
-    })
-
-    # 4. Log the Integration Event
     correlation_id = str(uuid.uuid4())
     event_payload = json.dumps({
         "correlation_id": correlation_id,
         "order_number": order.order_number,
         "customer": order.customer,
-        "items_count": len(order.items)
+        "destination_dock": order.destination_dock,
+        "items": items_payload,   # the WMS can now decrement what it can identify
     })
-    
+
+    # 4. Log the Integration Event
     integration_event = models.IntegrationEvent(
         source="ERP",
         destination="Integration_Engine",
