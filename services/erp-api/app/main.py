@@ -23,6 +23,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class OrderStatusUpdate(BaseModel):
+    status: str
+
 @app.get("/health", tags=["System"])
 def health_check():
     return {"status": "healthy", "service": "erp-api"}
