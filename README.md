@@ -2,24 +2,13 @@
 
 **A production-inspired warehouse automation platform simulating how ERP systems, WMS, PLCs, and robots communicate through an event-driven, IT/OT-converged architecture.**
 
-![Status](https://img.shields.io/badge/Status-In%20Development-blue)
-![ISA-95](https://img.shields.io/badge/Standard-ISA--95%20IT%2FOT-0052CC)
-![VDA 5050](https://img.shields.io/badge/Standard-VDA%205050-2E7D32)
-![OPC UA](https://img.shields.io/badge/Protocol-OPC%20UA%20(IEC%2062541)-E65100)
-![UNS](https://img.shields.io/badge/Architecture-Unified%20Namespace-6A1B9A)
-
-![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi)
-![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat-square&logo=postgresql&logoColor=white)
-![MQTT](https://img.shields.io/badge/MQTT-660066?style=flat-square&logo=mqtt&logoColor=white)
-![OPC UA](https://img.shields.io/badge/OPC%20UA-003366?style=flat-square)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
-
+![Status](https://img.shields.io/badge/Status-In_Development-blue?style=flat-square) ![ISA-95](https://img.shields.io/badge/Standard-ISA--95%20IT%2FOT-0052CC?style=flat-square) ![VDA 5050](https://img.shields.io/badge/Standard-VDA%205050-2E7D32?style=flat-square) ![UNS](https://img.shields.io/badge/Architecture-Unified%20Namespace-6A1B9A?style=flat-square) ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi) ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat-square&logo=postgresql&logoColor=white) ![MQTT](https://img.shields.io/badge/MQTT-660066?style=flat-square&logo=mqtt&logoColor=white) ![OPC UA](https://img.shields.io/badge/OPC%20UA-003366?style=flat-square) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
 
 > 💡 **Built for Industrial Systems Engineering:** Implements strict IT/OT separation, VDA 5050 fleet execution over MQTT, OPC UA hardware tag subscriptions, and domain-driven microservices.
 
 ![WIS HMI Dashboard](assets/hmi-dashboard.png)  
-*The live HMI: command center, OT telemetry, and the MQTT integration monitor.*
+
+*The live HMI: command center, OT telemetry, and the MQTT integration monitor.* 
 
 ---
 
@@ -29,7 +18,7 @@ Most warehouse projects stop at simple CRUD stock tracking. WIS focuses on the d
 
 Warehouse Integration Simulator (WIS) explores the engineering behind real intralogistics systems: asynchronous communication, industrial protocols, robotics coordination, and systems integration.
 
-Rather than focusing on a single application, WIS simulates how multiple independent systems collaborate inside an automated warehouse — from order creation in an ERP, through allocation in a WMS, to execution by robots and PLC-controlled equipment, and back again through confirmation events that close the loop.
+Rather than focusing on a single application, WIS simulates how multiple independent systems collaborate inside an automated warehouse; from order creation in an ERP, through allocation in a WMS, to execution by robots and PLC-controlled equipment, and back again through confirmation events that close the loop.
 
 This project is built in public from an engineering perspective: the architecture, decisions, trade-offs, and progress are documented openly in this repository.
 
@@ -166,12 +155,12 @@ This mirrors the real IT/OT separation used in industrial environments: ERP and 
 This project intentionally models how enterprise warehouse software is designed rather than how traditional monolithic applications are built. See `docs/adr/` for the full record. The Integration Engine acts as a lightweight WES (Warehouse Execution System) layer, orchestrating business tasks from the WMS and translating them into physical execution commands for the OT/MQTT layer.
 
 ### Why Event-Driven?
-Warehouse equipment operates asynchronously. An ERP should not directly control PLCs or robots — it publishes business facts; the OT layer reacts.
+Warehouse equipment operates asynchronously. An ERP should not directly control PLCs or robots, it publishes business facts; the OT layer reacts.
 
 ### Why a Transactional Outbox?
 The ERP writes the order **and** the integration event in one DB transaction. The Integration Engine polls and forwards it. No event is ever lost if the broker is down, and no two-phase commit is needed.
 
-### The Closed Loop (correct example workflow)
+### The Closed Loop (An example workflow)
 
 ```
 ERP ──(outbox)──▶ Integration Engine ──▶ WMS (allocates stock)
@@ -289,7 +278,7 @@ A bounded AI execution layer designed to augment — never replace — determini
 > **Design Principle:** The AI Supervisor never issues direct PLC or robot commands. It produces optimization proposals that must pass deterministic validation before entering the operational event bus.
 ---
 
-## Build in Public
+## Building in Public
 
 I document the engineering journey through this repository and on LinkedIn, including:
 
