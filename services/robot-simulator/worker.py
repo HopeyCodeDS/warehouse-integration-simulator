@@ -4,7 +4,7 @@ import os
 import paho.mqtt.client as mqtt
 
 # --- 1. Configuration (Environment Abstraction) ---
-ROBOT_ID = os.getenv("ROBOT_ID", "AMR-01")
+ROBOT_ID = os.getenv("ROBOT_ID", "AMR-Ultra")
 MQTT_BROKER_HOST = os.getenv("MQTT_BROKER_HOST", "mqtt-broker")
 MQTT_BROKER_PORT = int(os.getenv("MQTT_BROKER_PORT", 1883))
 
@@ -55,7 +55,7 @@ def publish_state(client, state, order_number=None, correlation=None):
         "timestamp": time.time()
     }
     # First Principle: Telemetry. We publish to a dedicated state topic.
-    client.publish("warehouse/robot/state", json.dumps(message), qos=1)
+    client.publish("warehouse/robot/state", json.dumps(message), qos=1, retain=True)
     print(f"[{ROBOT_ID}] 📤 Published state: {state}")
 
 # --- 5. The Main Loop (Simulating Physics/Time) ---

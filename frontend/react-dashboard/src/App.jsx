@@ -1,8 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import mqtt from 'mqtt';
 
 const MQTT_BROKER_WS = 'ws://localhost:9001';
 const ERP_API_URL = 'http://localhost:8000/api/orders';
+
+const formatLogMessage = (msg) => {
+  if (typeof msg !== 'object' || msg === null) return msg;
+  return JSON.stringify(msg, (_, value) => value === null ? undefined : value);
+};
 
 function App() {
   const [connected, setConnected] = useState(false);
@@ -18,6 +23,16 @@ function App() {
   const [dock, setDock] = useState('Dock-3');
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchMsg, setDispatchMsg] = useState(null);
+  const nextSequence = useRef(1042);
+
+  const addLog = (source, msg) => {
+    const newLog = {
+      time: new Date().toLocaleTimeString(),
+      source,
+      msg: formatLogMessage(msg)
+    };
+    setLiveLogs(prev => [...prev, newLog].slice(-100));
+  };
 
   useEffect(() => {
     const client = mqtt.connect(MQTT_BROKER_WS);
@@ -61,14 +76,15 @@ function App() {
     setDispatchMsg(null);
 
     // First Principle: The UI generates a simple ID, but the ERP validates it.
-    const orderNumber = `ORD-${Date.now()}`;
+    const productionOrderNumber = `ORD-${Date.now()}`;
+    const displayOrderNumber = `ORD-${nextSequence.current++}`;
 
     try {
       const response = await fetch(ERP_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          order_number: orderNumber,
+          order_number: productionOrderNumber,
           customer: customer,
           destination_dock: dock,
           items: [{ product_sku: sku, requested_qty: parseInt(quantity) }]
@@ -77,25 +93,16 @@ function App() {
 
       if (!response.ok) throw new Error('ERP rejected the order');
 
-      setDispatchMsg({ type: 'success', text: `Order ${orderNumber} dispatched!` });
+      setDispatchMsg({ type: 'success', text: `Order ${displayOrderNumber} dispatched!` });
       // Reset form
       setCustomer('');
       setQuantity(1);
-    } catch (err) {
+    } catch {
       setDispatchMsg({ type: 'error', text: 'Failed to dispatch. Check ERP API.' });
     } finally {
       setIsDispatching(false);
       setTimeout(() => setDispatchMsg(null), 4000);
     }
-  };
-
-  const addLog = (source, msg) => {
-    const newLog = {
-      time: new Date().toLocaleTimeString(),
-      source,
-      msg: typeof msg === 'object' ? JSON.stringify(msg) : msg
-    };
-    setLiveLogs(prev => [...prev, newLog].slice(-100));
   };
 
   const styles = {
@@ -176,7 +183,7 @@ function App() {
 
         {/* Robot State Card */}
         <div style={styles.card}>
-          <h3>🤖 AMR-01 (Robot)</h3>
+          <h3>🤖 AMR-Ultra (Robot)</h3>
           <p>State: <span style={robotState === 'IDLE' ? styles.statusGreen : styles.statusYellow}>{robotState}</span></p>
           <p>Current Order: {currentOrder || 'None'}</p>
         </div>

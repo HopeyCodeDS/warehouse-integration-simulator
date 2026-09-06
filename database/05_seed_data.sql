@@ -18,10 +18,10 @@ SELECT 'P300', id, 100 FROM wms.locations WHERE name = 'Rack-B1';
 -- 3. EQUIPMENT CONFIGURATION SEED DATA
 INSERT INTO wms.equipment (name, type, protocol, ip_address, enabled) VALUES
 ('Conveyor-1', 'conveyor', 'OPCUA', '192.168.1.10', TRUE),
-('Robot-AMR-01', 'robot', 'MQTT', '192.168.1.20', TRUE),
+('Robot-AMR-Ultra', 'robot', 'MQTT', '192.168.1.20', TRUE),
 ('Dock-3-Sensor', 'sensor', 'OPCUA', '192.168.1.30', TRUE);
 
 INSERT INTO wms.equipment_parameters (equipment_id, parameter, value)
 SELECT id, 'speed', '0.8' FROM wms.equipment WHERE name = 'Conveyor-1' UNION ALL
 SELECT id, 'direction', 'forward' FROM wms.equipment WHERE name = 'Conveyor-1' UNION ALL
-SELECT id, 'battery_limit', '20' FROM wms.equipment WHERE name = 'Robot-AMR-01';
+SELECT id, 'battery_limit', '20' FROM wms.equipment WHERE name = 'Robot-AMR-Ultra';
