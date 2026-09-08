@@ -118,6 +118,21 @@ services:
     networks:
       - wis-network
     restart: unless-stopped
+  
+  commissioning-api:
+    build: ./services/commissioning-api
+    container_name: wis-commissioning
+    ports:
+      - "8002:8002"
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - postgres
+      - mqtt-broker
+      - opcua-plc-simulator
+    networks:
+      - wis-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
