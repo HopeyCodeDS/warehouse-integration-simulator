@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     OPCUA_URL: str = "opc.tcp://opcua-plc-simulator:4840/freeopcua/server/"
 
 settings = Settings()
+
+# Engine built ONCE: pool creation is expensive; pool_pre_ping detects dead connections.
+engine = create_engine(
+    f"postgresql+psycopg2://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+    f"@{settings.DB_HOST}:5432/{settings.POSTGRES_DB}",
+    pool_pre_ping=True,
+)
+
 app = FastAPI(title="WIS Commissioning API")
 
 app.add_middleware(
@@ -26,28 +34,29 @@ app.add_middleware(
     allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
 )
 
-async def check_db():
+# ---------- Blocking checks: plain sync functions ----------
+def _check_db() -> str:
     try:
-        url = f"postgresql+psycopg2://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.DB_HOST}:5432/{settings.POSTGRES_DB}"
-        engine = create_engine(url)
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         return "OK"
-    except Exception: return "FAIL"
+    except Exception:
+        return "FAIL"
 
-async def check_http(url):
+def _check_http(url: str) -> str:
     try:
-        r = requests.get(url, timeout=2)
-        return "OK" if r.status_code == 200 else "FAIL"
-    except Exception: return "FAIL"
+        return "OK" if requests.get(url, timeout=2).status_code == 200 else "FAIL"
+    except Exception:
+        return "FAIL"
 
-async def check_mqtt():
+def _check_mqtt() -> str:
     try:
         client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         client.connect(settings.MQTT_HOST, settings.MQTT_PORT, 60)
         client.disconnect()
         return "OK"
-    except Exception: return "FAIL"
+    except Exception:
+        return "FAIL"
 
 async def check_opcua():
     try:
@@ -57,12 +66,22 @@ async def check_opcua():
         return "OK"
     except Exception: return "FAIL"
 
+async def _guarded(coro, timeout: float = 5.0) -> str:
+    """One hung dependency must never stall the whole report."""
+    try:
+        return await asyncio.wait_for(coro, timeout)
+    except asyncio.TimeoutError:
+        return "TIMEOUT"
+
 @app.get("/api/health-check")
 async def run_diagnostics():
-    # Run checks concurrently for speed
+    # Blocking I/O offloaded to worker threads -> gather is REAL concurrency now.
     db, erp, wms, mqtt_status, opcua = await asyncio.gather(
-        check_db(), check_http(settings.ERP_URL), check_http(settings.WMS_URL), 
-        check_mqtt(), check_opcua()
+        _guarded(asyncio.to_thread(_check_db)), 
+        _guarded(asyncio.to_thread(_check_http, settings.ERP_URL)), 
+        _guarded(asyncio.to_thread(_check_http, settings.WMS_URL)), 
+        _guarded(asyncio.to_thread(_check_mqtt)), 
+        _guarded(check_opcua)
     )
     
     return {
