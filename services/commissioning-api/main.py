@@ -58,10 +58,10 @@ def _check_mqtt() -> str:
     except Exception:
         return "FAIL"
 
+# ---------- Native async checks ----------
 async def check_opcua():
     try:
         async with Client(url=settings.OPCUA_URL) as client:
-            # Try to browse the root objects to verify connection
             await client.nodes.objects.get_children()
         return "OK"
     except Exception: return "FAIL"
@@ -81,7 +81,7 @@ async def run_diagnostics():
         _guarded(asyncio.to_thread(_check_http, settings.ERP_URL)), 
         _guarded(asyncio.to_thread(_check_http, settings.WMS_URL)), 
         _guarded(asyncio.to_thread(_check_mqtt)), 
-        _guarded(check_opcua)
+        _guarded(check_opcua())
     )
     
     return {
