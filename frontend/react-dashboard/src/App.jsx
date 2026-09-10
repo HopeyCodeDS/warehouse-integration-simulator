@@ -15,6 +15,8 @@ function App() {
   const [currentOrder, setCurrentOrder] = useState(null);
   const [sensorTriggered, setSensorTriggered] = useState(false);
   const [liveLogs, setLiveLogs] = useState([]);
+  const [isChecking, setIsChecking] = useState(false);
+  const [healthStatus, setHealthStatus] = useState(null);
 
   // Command Center State
   const [customer, setCustomer] = useState('Toyota');
@@ -32,6 +34,18 @@ function App() {
       msg: formatLogMessage(msg)
     };
     setLiveLogs(prev => [...prev, newLog].slice(-100));
+  };
+
+  const runDiagnostics = async () => {
+    setIsChecking(true);
+    try {
+      const res = await fetch('http://localhost:8002/api/health-check');
+      setHealthStatus(await res.json());
+    } catch (err) {
+      console.error('Diagnostics failed', err);
+    } finally {
+      setIsChecking(false);
+    }
   };
 
   useEffect(() => {
@@ -192,6 +206,34 @@ function App() {
         <div style={styles.card}>
           <h3>⚙️ Conveyor-1 (PLC)</h3>
           <p>Dock 3 Sensor: <span style={sensorTriggered ? styles.statusGreen : styles.statusRed}>{sensorTriggered ? 'TRIGGERED (Pallet Here)' : 'CLEAR'}</span></p>
+        </div>
+
+        <div style={{...styles.card, borderColor: '#3b82f6', gridColumn: '1 / -1', justifySelf: 'center', width: 'min(100%, 700px)', boxSizing: 'border-box'}}>
+          <h3>🛠️ Commissioning Mode (Site Validation)</h3>
+          <button onClick={runDiagnostics}
+                  style={{...styles.button, backgroundColor: '#2563eb'}}
+                  disabled={isChecking}>
+            {isChecking ? 'RUNNING DIAGNOSTICS...' : 'RUN SITE VALIDATION'}
+          </button>
+          {healthStatus && (
+            <ul style={{listStyle: 'none', padding: 0, marginTop: '15px'}}>
+              {Object.entries(healthStatus).map(([key, value]) => (
+                <li key={key}>
+                    <span>{key.replace(/_/g, ' ')}:</span>
+                    <span style={{
+                      color: key === 'timestamp'
+                        ? '#aaa'
+                        : value === 'OK' ? '#4caf50' : '#f44336',
+                      fontWeight: 'bold'
+                    }}>
+                      {key === 'timestamp'
+                        ? value
+                        : value === 'OK' ? '✅ ONLINE' : `❌ ${value}`}
+                    </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
