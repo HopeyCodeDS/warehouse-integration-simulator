@@ -85,9 +85,61 @@ services:
       - .env
     environment:
       - ROBOT_ID=AMR-Ultra
+      - FLEET_IDS=AMR-Ultra,AMR-Nova,AMR-Orbit,AMR-Vega
       - MQTT_BROKER_HOST=mqtt-broker
       - MQTT_BROKER_PORT=1883
       - PYTHONUNBUFFERED=1 
+    depends_on:
+      - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
+
+  robot-simulator-02:
+    build: ./services/robot-simulator
+    container_name: wis-robot-simulator-02
+    env_file:
+      - .env
+    environment:
+      - ROBOT_ID=AMR-Nova
+      - FLEET_IDS=AMR-Ultra,AMR-Nova,AMR-Orbit,AMR-Vega
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
+
+  robot-simulator-03:
+    build: ./services/robot-simulator
+    container_name: wis-robot-simulator-03
+    env_file:
+      - .env
+    environment:
+      - ROBOT_ID=AMR-Orbit
+      - FLEET_IDS=AMR-Ultra,AMR-Nova,AMR-Orbit,AMR-Vega
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
+
+  robot-simulator-04:
+    build: ./services/robot-simulator
+    container_name: wis-robot-simulator-04
+    env_file:
+      - .env
+    environment:
+      - ROBOT_ID=AMR-Vega
+      - FLEET_IDS=AMR-Ultra,AMR-Nova,AMR-Orbit,AMR-Vega
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - PYTHONUNBUFFERED=1
     depends_on:
       - mqtt-broker
     networks:
