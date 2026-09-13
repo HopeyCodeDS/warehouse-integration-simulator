@@ -6,7 +6,7 @@ ERP_URL := http://localhost:8000
 COMMISSIONING_URL := http://localhost:8002
 MQTT_HOST := localhost
 
-.PHONY: help setup install frontend-install build build-v2 lint lint-v2 validate up down restart stop logs logs-robots health mqtt order clean
+.PHONY: help setup install frontend-install build build-v2 lint lint-v2 validate e2e up down restart stop logs logs-robots health mqtt order clean
 
 help: ## Show available project commands
 	@echo WIS Warehouse Integration Simulator
@@ -20,6 +20,7 @@ help: ## Show available project commands
 	@echo   build-v2               Build the v2 frontend
 	@echo   lint-v2                Lint authored v2 source
 	@echo   validate               Run frontend, Python, and Compose checks
+	@echo   e2e                    Run order-flow tests against the running stack
 	@echo   health                 Query the commissioning health endpoint
 	@echo   mqtt                   Subscribe to robot telemetry
 	@echo   order                  Create a sample ERP order
@@ -50,6 +51,9 @@ validate: ## Run frontend, Python, and Compose validation
 	$(MAKE) build-v2
 	python -m py_compile services/robot-simulator/worker.py
 	$(COMPOSE) config --quiet
+
+e2e: ## Run order-flow tests against the running stack
+	python -m unittest discover -s tests -p "test_*.py" -v
 
 up: ## Start the complete Docker simulation stack
 	$(COMPOSE) up -d --build
