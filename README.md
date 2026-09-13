@@ -207,6 +207,14 @@ npm run dev
 
 The dashboard is typically served on a local Vite port, such as `http://localhost:5174` depending on your local configuration.
 
+To run the end-to-end order-flow tests, start the Docker stack first and run:
+
+```bash
+make e2e
+```
+
+The test creates a uniquely named ERP order and waits for it to reach `COMPLETED`. This exercises the ERP API, transactional outbox, integration engine, WMS allocation, MQTT task dispatch, robot simulator, WMS completion handler, and ERP status callback. The default timeout is 90 seconds and can be changed with `E2E_TIMEOUT_SECONDS`.
+
 ## Environment configuration
 
 The repository includes an `.env.example` file. Copy it to `.env` and fill in the required values for your local environment before starting the stack.
