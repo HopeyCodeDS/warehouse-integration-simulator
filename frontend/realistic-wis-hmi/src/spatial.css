@@ -1,0 +1,27 @@
+.spatial-label{position:absolute;z-index:1;color:#65818d;font:9px 'DM Mono',monospace;letter-spacing:.12em;pointer-events:none}
+.spatial-support-label{left:1%;top:3%}
+.spatial-support{position:absolute;left:1%;top:9%;width:5.5%;height:82%;display:grid;grid-template-rows:1fr 1.25fr 1.5fr;gap:7px;z-index:1}
+.spatial-support b{display:flex;align-items:center;padding:4px;border:1px solid #294454;background:#102634;color:#7894a0;font:8px/1.15 'DM Mono',monospace;font-weight:400;overflow:hidden}
+.spatial-storage-label{left:16%;top:3%}
+.spatial-flow-label{left:44%;top:3%}
+.spatial-docks-label{left:83%;top:3%}
+.spatial-rack{position:absolute;z-index:2;display:grid;grid-template-columns:16% 1fr 27%;align-items:center;gap:5px;padding:0 7px;border:1px solid #355567;background:#142c3c;text-align:left;transform-origin:center;transition:border-color .15s,background .15s}
+.spatial-rack:hover,.spatial-rack.selected{border-color:var(--teal);background:#153f43}
+.spatial-rack span{font:10px 'DM Mono',monospace;color:#e1edef}
+.spatial-rack i{height:4px;background:#345364;display:block}
+.spatial-rack i b{height:100%;display:block;background:var(--amber)}
+.spatial-rack small{font:8px 'DM Mono',monospace;color:#78929e;text-align:right}
+.spatial-conveyor{position:absolute;z-index:1;border:1px solid #486879;background:#183546;border-radius:3px;overflow:hidden}
+.spatial-conveyor span{position:absolute;inset:0;display:grid;place-items:center;color:#c3d7da;font:8px 'DM Mono',monospace;z-index:1}
+.spatial-conveyor i{position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 10px,#6d8c97 11px 13px,transparent 14px 23px);animation:belt 1.3s linear infinite;opacity:.55}
+.spatial-conveyor:not(.running) i{animation-play-state:paused;opacity:.25}.spatial-conveyor.fault{border-color:var(--coral);background:#3b202c}.spatial-conveyor.running{border-color:var(--teal)}
+.spatial-pick{position:absolute;z-index:1;left:44%;top:65%;width:25%;height:12%;border:1px solid #3f6575;background:#112b3c;display:grid;grid-template-columns:22px auto;align-content:center;padding-left:10px;column-gap:6px;color:var(--teal);font:8px 'DM Mono',monospace}
+.spatial-pick svg{grid-row:span 2}
+.spatial-pick b{color:#7c9ba1;font-weight:400;margin-top:3px}
+.spatial-dock{position:absolute;z-index:2;border:1px solid #365669;background:#132c3c;text-align:left;padding:5px 7px;display:grid;gap:2px}
+.spatial-dock:hover{border-color:var(--teal)}
+.spatial-dock span{font:9px 'DM Mono',monospace;color:#e2eef0}
+.spatial-dock b{font:8px 'DM Mono',monospace;font-weight:500}
+.robot-2d{transition:left .45s linear,top .45s linear}
+.telemetry-route{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
+.telemetry-route polyline{fill:none;stroke:var(--teal);stroke-width:.12;stroke-dasharray:.45 .3;vector-effect:non-scaling-stroke;opacity:.8;filter:drop-shadow(0 0 3px #20d3b2)}
