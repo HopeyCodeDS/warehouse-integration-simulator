@@ -36,6 +36,16 @@ class IntegrationEvent(Base):
     payload = Column(JSONB)
     status = Column(String)
 
+
+def record_event(db, source, destination, event_type, payload, status="PROCESSED"):
+    db.add(IntegrationEvent(
+        source=source,
+        destination=destination,
+        event_type=event_type,
+        payload=payload,
+        status=status,
+    ))
+
 completion_queue = Queue()
 
 def on_mqtt_message(client, userdata, msg):
@@ -56,10 +66,23 @@ def process_order_created(event, db):
     response = requests.post(settings.WMS_API_URL, json=wms_payload, timeout=5)
     if response.status_code == 201:
         event.status = "PROCESSED"
+        record_event(db, "Integration_Engine", "WMS", "TASK_DISPATCHED", {
+            "order_number": erp_data["order_number"],
+            "task_id": response.json().get("task_id"),
+            "payload": wms_payload,
+        })
         print(f"[Engine] ✅ {erp_data['order_number']} -> WMS (allocated)")
     else:
         event.status = "FAILED"
-        print(f"[Engine] ❌ WMS rejected {erp_data['order_number']}: {response.json().get('detail')}")
+        record_event(db, "Integration_Engine", "WMS", "TASK_REJECTED", {
+            "order_number": erp_data["order_number"],
+            "detail": response.text,
+        }, status="FAILED")
+        try:
+            detail = response.json().get("detail", response.text)
+        except ValueError:
+            detail = response.text
+        print(f"[Engine] ❌ WMS rejected {erp_data['order_number']}: {detail}")
 
 def process_order_completed(data, db):
     # Close the loop: tell the ERP its order is done

@@ -65,6 +65,33 @@ services:
     networks:
       - wis-network
     restart: unless-stopped
+
+  traffic-manager:
+    build: ./services/traffic-manager
+    container_name: wis-traffic-manager
+    environment:
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
+
+  simulation-control:
+    build: ./services/simulation-control
+    container_name: wis-simulation-control
+    environment:
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - SIMULATION_RUN_ID=local-run
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
   
   mqtt-broker:
     image: eclipse-mosquitto:2
