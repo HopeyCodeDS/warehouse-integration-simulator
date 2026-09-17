@@ -1,5 +1,5 @@
 import { Canvas, useFrame } from '@react-three/fiber';
-import { ContactShadows, OrbitControls, Text } from '@react-three/drei';
+import { ContactShadows, Line, OrbitControls, Text } from '@react-three/drei';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { warehouse } from './data';
@@ -38,16 +38,19 @@ function ShelfRack({ rack, selected, onSelect }) {
   </group>;
 }
 
-function Conveyor({ belt }) {
+function Conveyor({ belt, equipment }) {
+  const running = Boolean(equipment.Running);
+  const jammed = Boolean(equipment.Jam);
+  const beltColor = jammed ? '#7f3340' : running ? '#2c7b72' : '#1b3a4a';
   const rollers = Array.from({ length: 12 }, (_, index) => -belt.w / 2 + 0.3 + index * ((belt.w - 0.6) / 11));
   return <group position={[belt.x, 0, belt.z]}>
-    <Box position={[0, 0.26, 0]} args={[belt.w, 0.35, belt.d]} color="#1b3a4a" metalness={0.7} roughness={0.36} />
+    <Box position={[0, 0.26, 0]} args={[belt.w, 0.35, belt.d]} color={beltColor} metalness={0.7} roughness={0.36} />
     {rollers.map((x) => <mesh key={x} position={[x, 0.49, 0]} rotation={[0, 0, Math.PI / 2]}>
       <cylinderGeometry args={[0.16, 0.16, belt.d - 0.08, 16]} />
-      <meshStandardMaterial color="#93a7aa" metalness={0.85} roughness={0.24} />
+      <meshStandardMaterial color={running ? '#c2e2dc' : '#93a7aa'} metalness={0.85} roughness={0.24} />
     </mesh>)}
     <Box position={[0, 0.62, 0]} args={[belt.w - 0.18, 0.05, belt.d - 0.18]} color="#294f5e" metalness={0.2} roughness={0.48} />
-    <Text position={[0, 0.72, -0.7]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.16} color="#b4cdd0" anchorX="center" anchorY="middle">{belt.id.toUpperCase()} CONVEYOR</Text>
+    <Text position={[0, 0.72, -0.7]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.16} color={jammed ? '#ff6879' : running ? '#72f3d9' : '#b4cdd0'} anchorX="center" anchorY="middle">{belt.id.toUpperCase()} / {jammed ? 'JAM' : running ? 'RUNNING' : 'STOPPED'}</Text>
   </group>;
 }
 
@@ -94,7 +97,7 @@ function AisleMarkings() {
   </group>;
 }
 
-export function WarehouseScene({ robots, selected, setSelected }) {
+export function WarehouseScene({ robots, selected, setSelected, equipment = {} }) {
   return <Canvas camera={{ position: [25, 22, 26], fov: 42 }} shadows dpr={[1, 2]}>
     <color attach="background" args={['#081723']} />
     <fog attach="fog" args={['#081723', 30, 60]} />
@@ -104,9 +107,10 @@ export function WarehouseScene({ robots, selected, setSelected }) {
     <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow onClick={() => setSelected('floor')}><planeGeometry args={[warehouse.width, warehouse.depth]} /><meshStandardMaterial color="#0d222e" roughness={0.92} /></mesh>
     <gridHelper args={[warehouse.width, warehouse.width, '#294b59', '#173442']} position={[0, 0.02, 0]} />
     <AisleMarkings />
+    {robots.filter((robot) => robot.route?.length > 1).map((robot) => <Line key={`route-${robot.id}`} points={robot.route.map((routePoint) => [routePoint.x, 0.035, routePoint.z])} color={robot.color} lineWidth={1.4} dashed dashSize={0.35} gapSize={0.22} />)}
     {warehouse.racks.map((rack) => <ShelfRack key={rack.id} rack={rack} selected={selected === `Rack-${rack.id}`} onSelect={setSelected} />)}
     {warehouse.docks.map((dock) => <DockStation key={dock.id} dock={dock} selected={selected === dock.id} onSelect={setSelected} />)}
-    {warehouse.conveyors.map((belt) => <Conveyor key={belt.id} belt={belt} />)}
+    {warehouse.conveyors.map((belt) => <Conveyor key={belt.id} belt={belt} equipment={equipment} />)}
     {robots.map((robot) => <AMR key={robot.id} robot={robot} selected={selected === robot.id} onSelect={setSelected} />)}
     <ContactShadows position={[0, 0.04, 0]} opacity={0.58} scale={35} blur={2.5} far={12} />
     <OrbitControls enablePan={false} minDistance={15} maxDistance={42} maxPolarAngle={Math.PI / 2.15} target={[0, 0, 0]} />
