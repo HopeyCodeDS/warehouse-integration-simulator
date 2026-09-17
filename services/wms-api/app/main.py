@@ -3,9 +3,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from .database import SessionLocal, get_db
-from .models import Task, Inventory
+from .models import Task, Inventory, Location
 import paho.mqtt.client as mqtt
-import json, os, uuid
+import json, os, time, uuid
 
 app = FastAPI(title="WIS WMS API", version="1.0.0")
 
@@ -39,7 +39,13 @@ def allocate(items: List[ItemLine], db: Session):
                  .first())
         if inv is None:
             raise HTTPException(status_code=409, detail=f"Insufficient stock for {line.sku}")
-        allocations.append({"sku": line.sku, "qty": line.qty, "location_id": str(inv.location_id)})
+        location = db.query(Location).filter(Location.id == inv.location_id).first()
+        allocations.append({
+            "sku": line.sku,
+            "qty": line.qty,
+            "location_id": str(inv.location_id),
+            "source_location": location.name if location else "Unknown",
+        })
     return allocations
 
 # ---------- CONFIRMATION: robot done -> close digital loop ----------
@@ -119,6 +125,10 @@ def receive_task(task_data: TaskCreate, db: Session = Depends(get_db)):
     # It just publishes to a topic. Robots, PLCs, and dashboards subscribe.
     mqtt_topic = "warehouse/tasks/new"
     mqtt_client.publish(mqtt_topic, json.dumps({
+        "schema_version": "1.0",
+        "message_id": str(uuid.uuid4()),
+        "source": "wms-api",
+        "source_timestamp": time.time(),
         "task_id": str(new_task.id),
         "order_number": new_task.order_number,
         "task_type": new_task.task_type,
