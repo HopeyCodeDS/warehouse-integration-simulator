@@ -63,7 +63,7 @@ validate: ## Run frontend, Python, and Compose validation
 	$(MAKE) lint-realistic
 	$(MAKE) build-realistic
 	python -m py_compile services/robot-simulator/worker.py services/robot-simulator/simulation.py services/wms-api/app/main.py services/opcua-plc-simulator/server.py services/opcua-gateway/gateway.py services/traffic-manager/manager.py services/simulation-control/manager.py
-	python -m unittest tests/test_simulation_contract.py tests/test_traffic_manager.py -v
+	python -m unittest tests/test_simulation_contract.py tests/test_traffic_manager.py tests/test_simulation_control.py -v
 	python -m py_compile services/integration-engine/worker.py
 	$(COMPOSE) config --quiet
 	cd $(REALISTIC_DIR) && npm run test:e2e
