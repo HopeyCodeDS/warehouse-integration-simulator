@@ -1,10 +1,15 @@
-import sys
+import importlib.util
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parents[1] / "services" / "traffic-manager"))
-
-from manager import release, reservations, try_reserve
+_spec = importlib.util.spec_from_file_location(
+    "traffic_manager_service", Path(__file__).parents[1] / "services" / "traffic-manager" / "manager.py"
+)
+traffic_manager_service = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(traffic_manager_service)
+release = traffic_manager_service.release
+reservations = traffic_manager_service.reservations
+try_reserve = traffic_manager_service.try_reserve
 
 
 class TrafficReservationTests(unittest.TestCase):
