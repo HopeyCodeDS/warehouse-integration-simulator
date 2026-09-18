@@ -21,6 +21,10 @@ The system includes:
 
 The project is designed to show how services communicate across bounded contexts using explicit interfaces such as REST and MQTT.
 
+## Technical Documentation
+
+Use the [documentation index](docs/README.md) for architecture notes, implementation history, acceptance documents, ADRs, and reusable implementation-note templates. The [project engineering log](docs/PROJECT-LOG.md) is the append-only record of ongoing changes and validation results.
+
 ## Architecture
 
 ```mermaid
@@ -122,6 +126,9 @@ warehouse-integration-simulator/
 │   ├── 04_integration_schema.sql
 │   └── 05_seed_data.sql
 ├── docs/
+│   ├── README.md
+│   ├── PROJECT-LOG.md
+│   ├── templates/
 │   └── adr/
 ├── frontend/
 │   └── digital-twin/
