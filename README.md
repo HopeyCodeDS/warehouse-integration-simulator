@@ -29,28 +29,41 @@ Use the [documentation index](docs/README.md) for architecture notes, implementa
 
 ```mermaid
 flowchart LR
-  HMI[HMI Dashboard]
-  ERP[ERP API]
-  IE[Integration Engine]
-  WMS[WMS API]
-  DB[(PostgreSQL)]
-  MQTT[MQTT Broker]
-  PLC[PLC Simulator]
-  GW[OPC UA Gateway]
-  AMR[Robot Simulator]
+  subgraph IT["IT Layer"]
+    HMI["HMI Dashboard"]
+    ERP["ERP API"]
+    IE["Integration Engine"]
+    WMS["WMS API"]
+    COM["Commissioning API"]
+    DB[("PostgreSQL\nerp / wms / integration")]
+  end
+  subgraph OT["OT Layer"]
+    PLC["PLC Simulator"]
+    GW["OPC UA Gateway"]
+    AMR["Robot Simulator"]
+  end
+  MQTT{{"MQTT Broker"}}
 
-  HMI --> ERP
-  ERP --> DB
-  IE --> DB
-  IE --> WMS
-  WMS --> MQTT
-  MQTT --> AMR
-  PLC --> GW
-  GW --> MQTT
-  MQTT --> HMI
-  AMR --> MQTT
-  MQTT --> IE
-  IE --> ERP
+  HMI -->|REST: dispatch order| ERP
+  HMI -->|REST: run validation| COM
+  HMI -.->|subscribe ws://| MQTT
+  ERP -->|SQL: orders + outbox| DB
+  IE -->|SQL: poll outbox / log events| DB
+  IE -->|REST: translated task| WMS
+  IE -->|REST: PATCH order status| ERP
+  WMS -->|SQL: allocate / decrement| DB
+  WMS -->|MQTT: tasks/new| MQTT
+  WMS -.->|MQTT: sub tasks/completed| MQTT
+  MQTT -->|MQTT: dispatch| AMR
+  AMR -->|MQTT: telemetry + receipt| MQTT
+  MQTT -->|MQTT: orders/completed| IE
+  PLC -->|OPC UA: typed tags| GW
+  GW -->|MQTT: sensor events| MQTT
+  COM -.->|health probes| DB
+  COM -.->|health probes| ERP
+  COM -.->|health probes| WMS
+  COM -.->|health probes| MQTT
+  COM -.->|health probes| PLC
 ```
 
 ## Service responsibilities
@@ -252,6 +265,10 @@ This project is intentionally simplified. Some areas that are still limited or i
 - broader observability and metrics
 - production-grade deployment practices
 - more realistic warehouse inventory and routing logic
+- an authoritative simulation clock that can pause, resume, or step every backend process in lockstep
+- full historical replay that can reconstruct a completed run from ordered simulation events and ticks
+
+The current `services/simulation-control/manager.py` service is a lightweight control plane for simulation state, not a global time source. Robots, the PLC simulator, and integration workers still advance on their own loops, so the simulation remains operationally useful but not yet deterministic in the replayable sense described above.
 
 ## Development notes
 
