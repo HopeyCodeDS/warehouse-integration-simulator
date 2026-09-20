@@ -103,11 +103,11 @@ mqtt: ## Subscribe to live robot telemetry; requires mosquitto_sub
 	mosquitto_sub -h $(MQTT_HOST) -p 1883 -t warehouse/robot/state -v
 
 order: ## Create a sample ERP order and trigger the integration flow
-	curl --fail --silent --show-error -X POST $(ERP_URL)/api/orders -H "Content-Type: application/json" -d "{\"order_number\":\"ORD-MAKEFILE-001\",\"customer\":\"Toyota\",\"destination_dock\":\"Dock-3\",\"items\":[{\"product_sku\":\"P100\",\"requested_qty\":1}]}"
+	curl --fail --silent --show-error -X POST $(ERP_URL)/api/orders -H "Content-Type: application/json" -d "{\"order_number\":\"ORD-MAKEFILE-001\",\"customer\":\"Acme Manufacturing\",\"destination_dock\":\"Dock-3\",\"items\":[{\"product_sku\":\"P100\",\"requested_qty\":1}]}"
 	@echo.
 
 order-realistic: ## Create an in-stock order for the realistic task route
-	curl --fail --silent --show-error -X POST $(ERP_URL)/api/orders -H "Content-Type: application/json" -d "{\"order_number\":\"ORD-MAKEFILE-REALISTIC-001\",\"customer\":\"Toyota\",\"destination_dock\":\"Dock-3\",\"items\":[{\"product_sku\":\"P200\",\"requested_qty\":1}]}"
+	curl --fail --silent --show-error -X POST $(ERP_URL)/api/orders -H "Content-Type: application/json" -d "{\"order_number\":\"ORD-MAKEFILE-REALISTIC-001\",\"customer\":\"Acme Manufacturing\",\"destination_dock\":\"Dock-3\",\"items\":[{\"product_sku\":\"P200\",\"requested_qty\":1}]}"
 	@echo.
 
 clean: ## Remove frontend build output and Python caches

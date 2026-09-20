@@ -1,8 +1,8 @@
 -- 1. ERP SEED DATA
 INSERT INTO erp.products (sku, name, description) VALUES
-('P100', 'Toyota Engine Block', 'Standard V6 engine block'),
-('P200', 'Toyota Transmission', 'Automatic transmission unit'),
-('P300', 'Toyota Brake Pad Set', 'Set of 4 ceramic brake pads');
+('P100', 'Engine Block', 'Standard V6 engine block'),
+('P200', 'Transmission Assembly', 'Automatic transmission unit'),
+('P300', 'Brake Pad Set', 'Set of 4 ceramic brake pads');
 
 -- 2. WMS SEED DATA
 INSERT INTO wms.locations (name, type) VALUES
