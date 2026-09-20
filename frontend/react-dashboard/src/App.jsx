@@ -19,7 +19,7 @@ function App() {
   const [healthStatus, setHealthStatus] = useState(null);
 
   // Command Center State
-  const [customer, setCustomer] = useState('Toyota');
+  const [customer, setCustomer] = useState('Acme Manufacturing');
   const [sku, setSku] = useState('P100');
   const [quantity, setQuantity] = useState(1);
   const [dock, setDock] = useState('Dock-3');
