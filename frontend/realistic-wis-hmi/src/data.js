@@ -32,10 +32,10 @@ export const warehouse = {
 };
 
 export const orders = [
-  { id: 'ORD-204', customer: 'Toyota', task: 'Pallet #204', status: 'Picking', progress: 66 },
+  { id: 'ORD-204', customer: 'Acme Manufacturing', task: 'Pallet #204', status: 'Picking', progress: 66 },
   { id: 'ORD-203', customer: 'Bosch', task: 'Pallet #201', status: 'In Transit', progress: 48 },
   { id: 'ORD-202', customer: 'Volvo', task: 'Pallet #198', status: 'Completed', progress: 100 },
-  { id: 'ORD-201', customer: 'Toyota', task: 'Pallet #184', status: 'Completed', progress: 100 },
+  { id: 'ORD-201', customer: 'Acme Manufacturing', task: 'Pallet #184', status: 'Completed', progress: 100 },
 ];
 
 export const events = [
