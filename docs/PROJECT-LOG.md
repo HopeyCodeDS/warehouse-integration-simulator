@@ -2,6 +2,27 @@
 
 This is the append-only technical record for implementation work in the Warehouse Integration Simulator. Add the newest entry at the top. Keep entries concise but concrete enough to reconstruct why a change exists and how it was verified.
 
+## 2026-09-20 - Demo Media and Sample Cleanup
+
+### Intent
+
+Improve the top-level README media surface and remove real-brand names from sample dispatch data.
+
+### Implemented
+
+- Added a README demo-media section linking the current HMI screenshot and the 2D/3D demo videos in `assets/`.
+- Replaced Toyota-branded sample customer names with a generic fictional customer across the active frontends and Makefile examples.
+- Simplified ERP seed product names so the demo data reads as generic sample inventory instead of a real brand catalog.
+
+### Validation
+
+- Reviewed the README media section for consistency with the asset folder.
+- Searched active source files to confirm `Toyota` no longer appears in the editable runtime paths.
+
+### Remaining Boundary
+
+- The recorded videos are linked as demo evidence; if they become stale, they should be replaced rather than reworded.
+
 ## 2026-09-20 - Frontend Consolidation Documentation
 
 ### Intent
