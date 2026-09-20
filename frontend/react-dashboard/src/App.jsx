@@ -50,10 +50,15 @@ function App() {
 
   useEffect(() => {
     const client = mqtt.connect(MQTT_BROKER_WS);
+    const monitoredTopics = [
+      'warehouse/robot/state',
+      'warehouse/tasks/new',
+      'warehouse/events/sensor',
+    ];
 
     client.on('connect', () => {
       setConnected(true);
-      client.subscribe('warehouse/#');
+      client.subscribe(monitoredTopics);
       addLog('SYSTEM', 'Dashboard connected to MQTT Broker');
     });
 
