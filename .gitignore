@@ -22,3 +22,5 @@ dist/
 
 # Docker volumes
 postgres_data/
+
+**/test-results/*
