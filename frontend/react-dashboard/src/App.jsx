@@ -3,6 +3,13 @@ import mqtt from 'mqtt';
 
 const MQTT_BROKER_WS = 'ws://localhost:9001';
 const ERP_API_URL = 'http://localhost:8000/api/orders';
+const MONITORED_TOPICS = new Set([
+  'warehouse/robot/state',
+  'warehouse/tasks/new',
+  'warehouse/tasks/completed',
+  'warehouse/orders/completed',
+  'warehouse/events/sensor',
+]);
 
 const formatLogMessage = (msg) => {
   if (typeof msg !== 'object' || msg === null) return msg;
@@ -53,14 +60,19 @@ function App() {
 
     client.on('connect', () => {
       setConnected(true);
-      client.subscribe('warehouse/#');
+      client.subscribe('warehouse/robot/#');
+      client.subscribe('warehouse/tasks/#');
+      client.subscribe('warehouse/orders/#');
+      client.subscribe('warehouse/events/#');
       addLog('SYSTEM', 'Dashboard connected to MQTT Broker');
     });
 
     client.on('message', (topic, message) => {
       try {
         const payload = JSON.parse(message.toString());
-        addLog(topic, payload);
+        if (MONITORED_TOPICS.has(topic)) {
+          addLog(topic, payload);
+        }
 
         if (topic === 'warehouse/robot/state') {
           setRobotState(payload.state);
