@@ -1,84 +1,188 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import mqtt from 'mqtt';
 
-// First Principle: Environment Abstraction
-// In Docker, this would be ws://mqtt-broker:9001. Locally, it is ws://localhost:9001
 const MQTT_BROKER_WS = 'ws://localhost:9001';
+const ERP_API_URL = 'http://localhost:8000/api/orders';
+
+const formatLogMessage = (msg) => {
+  if (typeof msg !== 'object' || msg === null) return msg;
+  return JSON.stringify(msg, (_, value) => value === null ? undefined : value);
+};
 
 function App() {
   const [connected, setConnected] = useState(false);
   const [robotState, setRobotState] = useState('OFFLINE');
   const [currentOrder, setCurrentOrder] = useState(null);
+  const [currentCorrelationId, setCurrentCorrelationId] = useState(null);
   const [sensorTriggered, setSensorTriggered] = useState(false);
   const [liveLogs, setLiveLogs] = useState([]);
+  const [isChecking, setIsChecking] = useState(false);
+  const [healthStatus, setHealthStatus] = useState(null);
+
+  // Command Center State
+  const [customer, setCustomer] = useState('Acme Manufacturing');
+  const [sku, setSku] = useState('P100');
+  const [quantity, setQuantity] = useState(1);
+  const [dock, setDock] = useState('Dock-3');
+  const [isDispatching, setIsDispatching] = useState(false);
+  const [dispatchMsg, setDispatchMsg] = useState(null);
+  const nextSequence = useRef(1042);
+  const lastRobotLogRef = useRef({ robotId: null, state: null, waypointIndex: null, orderNumber: null });
+
+  const addLog = (source, msg) => {
+    const newLog = {
+      time: new Date().toLocaleTimeString(),
+      source,
+      msg: formatLogMessage(msg)
+    };
+    setLiveLogs(prev => [...prev, newLog].slice(-100));
+  };
+
+  const runDiagnostics = async () => {
+    setIsChecking(true);
+    try {
+      const res = await fetch('http://localhost:8002/api/health-check');
+      setHealthStatus(await res.json());
+    } catch (err) {
+      console.error('Diagnostics failed', err);
+    } finally {
+      setIsChecking(false);
+    }
+  };
 
   useEffect(() => {
-    // 1. Connect to MQTT via WebSockets
     const client = mqtt.connect(MQTT_BROKER_WS);
+    const monitoredTopics = [
+      'warehouse/robot/state',
+      'warehouse/tasks/new',
+      'warehouse/events/sensor',
+      'warehouse/orders/completed',
+    ];
 
     client.on('connect', () => {
-      console.log('✅ Connected to MQTT Broker via WebSockets');
       setConnected(true);
-      // Subscribe to ALL warehouse topics using the wildcard '#'
-      client.subscribe('warehouse/#');
+      client.subscribe(monitoredTopics);
       addLog('SYSTEM', 'Dashboard connected to MQTT Broker');
     });
 
-    // 2. First Principle: Event-Driven UI
-    // The UI doesn't ask the database for updates. It reacts to MQTT events.
     client.on('message', (topic, message) => {
       try {
         const payload = JSON.parse(message.toString());
-        addLog(topic, payload);
 
         if (topic === 'warehouse/robot/state') {
           setRobotState(payload.state);
           if (payload.order_number) setCurrentOrder(payload.order_number);
+          if (payload.correlation_id) setCurrentCorrelationId(payload.correlation_id);
+
+          const lastRobotLog = lastRobotLogRef.current;
+          const robotId = payload.robot_id || 'robot';
+          const waypointIndex = typeof payload.waypoint_index === 'number' ? payload.waypoint_index : null;
+
+          if (lastRobotLog.robotId !== robotId || lastRobotLog.state !== payload.state) {
+            addLog('ROBOT', `${robotId} state -> ${payload.state}`);
+          }
+
+          if (payload.state === 'MOVING' && waypointIndex !== null && waypointIndex !== lastRobotLog.waypointIndex) {
+            const routeLength = Array.isArray(payload.route) ? payload.route.length : null;
+            const waypointText = routeLength ? `${waypointIndex + 1}/${routeLength}` : `${waypointIndex + 1}`;
+            addLog('ROBOT', `${robotId} moved to waypoint ${waypointText}`);
+          }
+
+          if (payload.state === 'DOCKED' && lastRobotLog.state !== 'DOCKED') {
+            addLog('ROBOT', `${robotId} docked for order ${payload.order_number || 'unknown order'}`);
+          }
+
+          lastRobotLogRef.current = {
+            robotId,
+            state: payload.state,
+            waypointIndex,
+            orderNumber: payload.order_number || null,
+          };
         } 
         else if (topic === 'warehouse/tasks/new') {
           setCurrentOrder(payload.order_number);
+          if (payload.correlation_id) setCurrentCorrelationId(payload.correlation_id);
+          addLog('WMS', `Task dispatched for ${payload.order_number || 'unknown order'} to ${payload.payload?.destination_dock || 'destination dock'}${payload.correlation_id ? ` [${payload.correlation_id}]` : ''}`);
         }
         else if (topic === 'warehouse/events/sensor') {
           if (payload.event === 'PALLET_ARRIVED') {
             setSensorTriggered(true);
-            // Auto-reset sensor visual after 2 seconds
             setTimeout(() => setSensorTriggered(false), 2000);
+            addLog('SENSOR', 'Dock 3 pallet arrival detected');
           }
+        }
+        else if (topic === 'warehouse/orders/completed') {
+          if (payload.correlation_id) setCurrentCorrelationId(payload.correlation_id);
+          addLog('COMPLETION', `Order ${payload.order_number || 'unknown order'} completed by ${payload.robot_id || 'robot'}${payload.correlation_id ? ` [${payload.correlation_id}]` : ''}`);
         }
       } catch (err) {
         console.error('Failed to parse MQTT message', err);
       }
     });
 
-    client.on('error', (err) => {
-      console.error('MQTT Connection Error:', err);
-      setConnected(false);
-    });
-
-    // Cleanup on component unmount
     return () => client.end();
   }, []);
 
-  const addLog = (source, msg) => {
-    const newLog = {
-      time: new Date().toLocaleTimeString(),
-      source,
-      msg: typeof msg === 'object' ? JSON.stringify(msg) : msg
-    };
-    setLiveLogs(prev => [newLog, ...prev].slice(0, 15)); // Keep last 15 logs
+  // --- Dispatch Order ---
+  const handleDispatch = async (e) => {
+    e.preventDefault();
+    setIsDispatching(true);
+    setDispatchMsg(null);
+
+    // First Principle: The UI generates a simple ID, but the ERP validates it.
+    const productionOrderNumber = `ORD-${Date.now()}`;
+    const displayOrderNumber = `ORD-${nextSequence.current++}`;
+
+    try {
+      const response = await fetch(ERP_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_number: productionOrderNumber,
+          customer: customer,
+          destination_dock: dock,
+          items: [{ product_sku: sku, requested_qty: parseInt(quantity) }]
+        })
+      });
+
+      const responsePayload = await response.json().catch(() => ({}));
+
+      if (!response.ok) throw new Error(responsePayload.detail || 'ERP rejected the order');
+
+      if (responsePayload.correlation_id) setCurrentCorrelationId(responsePayload.correlation_id);
+      setCurrentOrder(responsePayload.order_number || productionOrderNumber);
+      setDispatchMsg({ type: 'success', text: `Order ${displayOrderNumber} dispatched${responsePayload.correlation_id ? ` [${responsePayload.correlation_id}]` : ''}!` });
+      // Reset form
+      setCustomer('');
+      setQuantity(1);
+    } catch {
+      setDispatchMsg({ type: 'error', text: 'Failed to dispatch. Check ERP API.' });
+    } finally {
+      setIsDispatching(false);
+      setTimeout(() => setDispatchMsg(null), 4000);
+    }
   };
 
-  // Simple inline styling for the dashboard
   const styles = {
     container: { fontFamily: 'monospace', padding: '20px', backgroundColor: '#1e1e1e', color: '#d4d4d4', minHeight: '100vh' },
     header: { borderBottom: '2px solid #333', paddingBottom: '10px', marginBottom: '20px' },
-    grid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' },
     card: { backgroundColor: '#252526', padding: '20px', borderRadius: '8px', border: '1px solid #333' },
     statusGreen: { color: '#4caf50', fontWeight: 'bold' },
     statusRed: { color: '#f44336', fontWeight: 'bold' },
     statusYellow: { color: '#ffeb3b', fontWeight: 'bold' },
-    logContainer: { backgroundColor: '#000', padding: '15px', borderRadius: '4px', height: '300px', overflowY: 'scroll', fontSize: '12px' },
-    logEntry: { marginBottom: '5px', borderBottom: '1px solid #222', paddingBottom: '5px' }
+    logContainer: { backgroundColor: '#000', padding: '18px', borderRadius: '4px', minHeight: '420px', height: '62vh', maxHeight: '760px', overflowY: 'auto', fontSize: '13px', lineHeight: '1.55' },
+    logEntry: { display: 'grid', gridTemplateColumns: '92px minmax(190px, 280px) 1fr', gap: '10px', marginBottom: '8px', borderBottom: '1px solid #222', paddingBottom: '8px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' },
+    monitorHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginTop: '8px' },
+    clearButton: { backgroundColor: 'transparent', color: '#aaa', border: '1px solid #555', borderRadius: '4px', padding: '7px 12px', cursor: 'pointer', fontFamily: 'monospace' },
+    
+    // Command Center Styles
+    formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' },
+    inputGroup: { display: 'flex', flexDirection: 'column' },
+    label: { fontSize: '12px', color: '#888', marginBottom: '5px' },
+    input: { backgroundColor: '#111', border: '1px solid #444', color: '#fff', padding: '8px', borderRadius: '4px', fontFamily: 'monospace' },
+    button: { backgroundColor: '#16A34A', color: '#fff', border: 'none', padding: '12px', borderRadius: '4px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'monospace' },
+    buttonDisabled: { backgroundColor: '#4b5563', cursor: 'not-allowed' }
   };
 
   return (
@@ -89,11 +193,58 @@ function App() {
       </header>
 
       <div style={styles.grid}>
+        {/* Command Center Card */}
+        <div style={{...styles.card, borderColor: '#16A34A', gridColumn: 'span 2'}}>
+          <h3>📡 Command Center</h3>
+          <form onSubmit={handleDispatch} style={styles.formGrid}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Customer</label>
+              <input style={styles.input} value={customer} onChange={e => setCustomer(e.target.value)} required />
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Destination Dock</label>
+              <select style={styles.input} value={dock} onChange={e => setDock(e.target.value)}>
+                <option value="Dock-1">Dock 1</option>
+                <option value="Dock-2">Dock 2</option>
+                <option value="Dock-3">Dock 3</option>
+              </select>
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Product SKU</label>
+              <select style={styles.input} value={sku} onChange={e => setSku(e.target.value)}>
+                <option value="P100">P100 (Engine Block)</option>
+                <option value="P200">P200 (Transmission)</option>
+                <option value="P300">P300 (Brake Pads)</option>
+              </select>
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Quantity</label>
+              <input style={styles.input} type="number" min="1" value={quantity} onChange={e => setQuantity(e.target.value)} required />
+            </div>
+            
+            <div style={{ gridColumn: 'span 2' }}>
+              <button 
+                type="submit" 
+                style={isDispatching ? {...styles.button, ...styles.buttonDisabled} : styles.button}
+                disabled={isDispatching}
+              >
+                {isDispatching ? 'DISPATCHING...' : '🚀 DISPATCH ORDER'}
+              </button>
+              {dispatchMsg && (
+                <p style={{ marginTop: '10px', color: dispatchMsg.type === 'success' ? '#4caf50' : '#f44336' }}>
+                  {dispatchMsg.text}
+                </p>
+              )}
+            </div>
+          </form>
+        </div>
+
         {/* Robot State Card */}
         <div style={styles.card}>
-          <h3>🤖 AMR-01 (Robot)</h3>
+          <h3>🤖 AMR-Ultra (Robot)</h3>
           <p>State: <span style={robotState === 'IDLE' ? styles.statusGreen : styles.statusYellow}>{robotState}</span></p>
           <p>Current Order: {currentOrder || 'None'}</p>
+          <p>Correlation ID: {currentCorrelationId || 'None'}</p>
         </div>
 
         {/* Conveyor State Card */}
@@ -102,15 +253,41 @@ function App() {
           <p>Dock 3 Sensor: <span style={sensorTriggered ? styles.statusGreen : styles.statusRed}>{sensorTriggered ? 'TRIGGERED (Pallet Here)' : 'CLEAR'}</span></p>
         </div>
 
-        {/* Active Tasks Card */}
-        <div style={styles.card}>
-          <h3>📦 Active Logistics</h3>
-          <p>System: <span style={styles.statusGreen}>OPERATIONAL</span></p>
-          <p>Last known Order: {currentOrder || 'Awaiting...'}</p>
+        <div style={{...styles.card, borderColor: '#3b82f6', gridColumn: '1 / -1', justifySelf: 'center', width: 'min(100%, 700px)', boxSizing: 'border-box'}}>
+          <h3>🛠️ Commissioning Mode (Site Validation)</h3>
+          <button onClick={runDiagnostics}
+                  style={{...styles.button, backgroundColor: '#2563eb'}}
+                  disabled={isChecking}>
+            {isChecking ? 'RUNNING DIAGNOSTICS...' : 'RUN SITE VALIDATION'}
+          </button>
+          {healthStatus && (
+            <ul style={{listStyle: 'none', padding: 0, marginTop: '15px'}}>
+              {Object.entries(healthStatus).map(([key, value]) => (
+                <li key={key}>
+                    <span>{key.replace(/_/g, ' ')}:</span>
+                    <span style={{
+                      color: key === 'timestamp'
+                        ? '#aaa'
+                        : value === 'OK' ? '#4caf50' : '#f44336',
+                      fontWeight: 'bold'
+                    }}>
+                      {key === 'timestamp'
+                        ? value
+                        : value === 'OK' ? '✅ ONLINE' : `❌ ${value}`}
+                    </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
-      <h3>📡 Live Integration Monitor (MQTT Event Bus)</h3>
+      <div style={styles.monitorHeader}>
+        <h3>📡 Live Integration Monitor</h3>
+        <button type="button" style={styles.clearButton} onClick={() => setLiveLogs([])}>
+          Clear logs
+        </button>
+      </div>
       <div style={styles.logContainer}>
         {liveLogs.map((log, idx) => (
           <div key={idx} style={styles.logEntry}>

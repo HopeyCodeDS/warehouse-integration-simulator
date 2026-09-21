@@ -1,11 +1,11 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from .database import engine, Base, get_db
-from .models import Task
+from typing import List, Optional
+from .database import SessionLocal, get_db
+from .models import Task, Inventory, Location
 import paho.mqtt.client as mqtt
-import json
-import os
+import json, os, time, uuid
 
 app = FastAPI(title="WIS WMS API", version="1.0.0")
 
@@ -16,19 +16,81 @@ MQTT_BROKER_PORT = int(os.getenv("MQTT_BROKER_PORT", 1883))
 # Create a global MQTT client
 mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 
-def connect_mqtt():
-    """Connect to the MQTT broker."""
+# --- Pydantic Schemas ---
+class ItemLine(BaseModel):
+    sku: str
+    qty: int
+
+class TaskCreate(BaseModel):
+    order_number: str
+    task_type: str
+    correlation_id: Optional[str] = None
+    items: List[ItemLine]
+    payload: dict = {}
+
+
+# ---------- ALLOCATION: reserve stock or reject ----------
+def allocate(items: List[ItemLine], db: Session):
+    allocations = []
+    for line in items:
+        inv = (db.query(Inventory)
+                 .filter(Inventory.product_sku == line.sku,
+                         Inventory.quantity >= line.qty)
+                 .first())
+        if inv is None:
+            raise HTTPException(status_code=409, detail=f"Insufficient stock for {line.sku}")
+        location = db.query(Location).filter(Location.id == inv.location_id).first()
+        allocations.append({
+            "sku": line.sku,
+            "qty": line.qty,
+            "location_id": str(inv.location_id),
+            "source_location": location.name if location else "Unknown",
+        })
+    return allocations
+
+# ---------- CONFIRMATION: robot done -> close digital loop ----------
+def on_complete(client, userdata, msg):
+    data = json.loads(msg.payload.decode())
+    db = SessionLocal()
     try:
-        mqtt_client.connect(MQTT_BROKER_HOST, MQTT_BROKER_PORT, 60)
-        mqtt_client.loop_start()  # Start background thread for network traffic
-        print(f"[WMS] ✅ Connected to MQTT Broker at {MQTT_BROKER_HOST}:{MQTT_BROKER_PORT}")
+        task = db.query(Task).filter(Task.id == uuid.UUID(data["task_id"])).first()
+        if task is None or task.status == "COMPLETED":
+            return
+        task.status = "COMPLETED"
+        # Stock movement: decrement the allocated inventory
+        for alloc in (task.payload or {}).get("allocations", []):
+            inv = (db.query(Inventory)
+                     .filter(Inventory.location_id == uuid.UUID(alloc["location_id"]),
+                             Inventory.product_sku == alloc["sku"])
+                     .first())
+            if inv:
+                inv.quantity -= alloc["qty"]
+        db.commit()
+        print(f"[WMS] ✅ Task COMPLETED. Inventory decremented for {task.order_number}")
+        mqtt_client.publish("warehouse/orders/completed", json.dumps({
+            "order_number": task.order_number,
+            "correlation_id": task.correlation_id or data.get("correlation_id"),
+        }), qos=1)
     except Exception as e:
-        print(f"[WMS] ❌ Failed to connect to MQTT Broker: {e}")
+        db.rollback()
+        print(f"[WMS] ❌ Completion handling failed: {e}")
+    finally:
+        db.close()
 
 # Connect when the app starts
 @app.on_event("startup")
-def startup_event():
-    connect_mqtt()
+def startup():
+    """Connect to the MQTT broker."""
+    for attempt in range(5):
+        try:
+            mqtt_client.connect(MQTT_BROKER_HOST, MQTT_BROKER_PORT, 60)
+            break
+        except Exception:
+            import time; time.sleep(2)
+    mqtt_client.on_message = on_complete
+    mqtt_client.subscribe("warehouse/tasks/completed")
+    mqtt_client.loop_start()
+    print("[WMS] ✅ Subscribed to warehouse/tasks/completed")
 
 @app.on_event("shutdown")
 def shutdown_event():
@@ -36,48 +98,44 @@ def shutdown_event():
     mqtt_client.disconnect()
     print("[WMS] Disconnected from MQTT Broker")
 
-# --- Pydantic Schemas ---
-class TaskCreate(BaseModel):
-    order_number: str
-    task_type: str
-    correlation_id: str | None = None
-    payload: dict
-
 @app.get("/health")
 def health():
     return {"status": "healthy", "service": "wms-api"}
 
 @app.post("/api/tasks", status_code=201)
 def receive_task(task_data: TaskCreate, db: Session = Depends(get_db)):
+    allocations = allocate(task_data.items, db)  # rejects with 409 if stock short
+
     # 1. Save to WMS database
     new_task = Task(
         order_number=task_data.order_number,
+        correlation_id=task_data.correlation_id,
         task_type=task_data.task_type,
-        payload=task_data.payload
+        status="ALLOCATED",
+        payload={**task_data.payload,
+                 "items": [i.model_dump() for i in task_data.items],
+                 "allocations": allocations},
     )
     db.add(new_task)
     db.commit()
     db.refresh(new_task)
-    print(f"[WMS] Task saved to database: {new_task.order_number}")
+    print(f"[WMS] Task ALLOCATED from {allocations} for {new_task.order_number}")
 
     # 2. CROSS THE IT/OT BOUNDARY: Publish to MQTT
     # First Principle: The WMS doesn't know WHO will receive this.
     # It just publishes to a topic. Robots, PLCs, and dashboards subscribe.
     mqtt_topic = "warehouse/tasks/new"
-    mqtt_message = {
+    mqtt_client.publish(mqtt_topic, json.dumps({
+        "schema_version": "1.0",
+        "message_id": str(uuid.uuid4()),
+        "source": "wms-api",
+        "source_timestamp": time.time(),
         "task_id": str(new_task.id),
-        "correlation_id": task_data.correlation_id,
         "order_number": new_task.order_number,
         "task_type": new_task.task_type,
+        "correlation_id": task_data.correlation_id,
         "payload": new_task.payload,
         "status": "DISPATCHED"
-    }
+    }), qos=1)
 
-    result = mqtt_client.publish(mqtt_topic, json.dumps(mqtt_message), qos=1)
-    
-    if result.rc == mqtt.MQTT_ERR_SUCCESS:
-        print(f"[WMS] 📡 Published task to MQTT topic: {mqtt_topic}")
-    else:
-        print(f"[WMS] ❌ Failed to publish to MQTT. Error code: {result.rc}")
-
-    return {"message": "Task accepted and dispatched to OT layer", "task_id": str(new_task.id)}
+    return {"message": "Task allocated and dispatched", "task_id": str(new_task.id)}

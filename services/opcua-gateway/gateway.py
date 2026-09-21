@@ -3,6 +3,7 @@ import logging
 import json
 import uuid
 import os
+import time
 import paho.mqtt.client as mqtt
 from asyncua import Client
 from asyncua.common.subscription import SubHandler
@@ -28,8 +29,7 @@ class MySubHandler(SubHandler):
         
         logger.info(f"[Gateway] 🔔 Data Change: {node.nodeid} -> {val}")
         
-        # We only subscribed to Sensor_Dock3, so any True value is the sensor tripping
-        if val is True:
+        if node.nodeid.Identifier.endswith("Sensor_Dock3") and val is True:
             message = {
                 "event": "PALLET_ARRIVED",
                 "location": "Dock-3",
@@ -38,6 +38,17 @@ class MySubHandler(SubHandler):
             }
             mqtt_client.publish("warehouse/events/sensor", json.dumps(message))
             logger.info("[Gateway] 📡 Published MQTT event: PALLET_ARRIVED")
+        elif str(node.nodeid.Identifier).endswith(("Running", "Speed", "Occupied", "Direction", "PalletId", "Jam")):
+            message = {
+                "schema_version": "1.0",
+                "message_id": str(uuid.uuid4()),
+                "source": "opcua-gateway",
+                "source_timestamp": time.time(),
+                "equipment_id": "Conveyor1",
+                "tag": str(node.nodeid.Identifier).split(".")[-1],
+                "value": val,
+            }
+            mqtt_client.publish("warehouse/equipment/state", json.dumps(message), qos=1)
 
 async def main():
     # 1. Connect MQTT
@@ -45,15 +56,21 @@ async def main():
     mqtt_client.loop_start()
     
     # 2. First Principle: Distributed Time (Retry Loop)
-    client = Client(url=PLC_URL)
+    client = None
     while True:
         try:
             logger.info(f"Attempting to connect to PLC at {PLC_URL}...")
+            client = Client(url=PLC_URL)
             await client.connect()
             logger.info("✅ Connected to PLC.")
             break
         except Exception as e:
-            logger.warning(f"⚠️ PLC not ready yet. Retrying in 3 seconds...")
+            logger.warning(f"⚠️ PLC not ready yet ({type(e).__name__}: {e}). Retrying in 3 seconds...")
+            if client is not None:
+                try:
+                    await client.disconnect()
+                except Exception:
+                    pass
             await asyncio.sleep(3)
 
     try:
@@ -64,12 +81,14 @@ async def main():
         
         # Find the nodes dynamically using the discovered namespace index
         conveyor = await client.nodes.objects.get_child(f"{ns_idx}:Conveyor1")
-        sensor_node = await conveyor.get_child(f"{ns_idx}:Sensor_Dock3")
+        tag_names = ["Sensor_Dock3", "Running", "Speed", "Occupied", "Direction", "PalletId", "Jam"]
+        tag_nodes = [await conveyor.get_child(f"{ns_idx}:{name}") for name in tag_names]
         
         # 4. Create Subscription
         handler = MySubHandler()
         sub = await client.create_subscription(100, handler) 
-        await sub.subscribe_data_change(sensor_node)
+        for tag_node in tag_nodes:
+            await sub.subscribe_data_change(tag_node)
         
         logger.info("👀 Gateway subscribed to Sensor_Dock3. Waiting for events...")
         

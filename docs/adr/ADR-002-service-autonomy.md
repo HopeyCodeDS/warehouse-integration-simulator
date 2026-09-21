@@ -43,7 +43,7 @@ Positive:
 Trade-offs:
 - Deliberate duplication of DTO definitions; a contract change must be updated
   in each consumer manually.
-- Contract drift is possible; mitigated by integration/FAT tests (Week 8–10)
+- Contract drift is possible; mitigated by integration/FAT tests (To be implemented...)
   and the documented API spec (`docs/api-spec.md`).
 
 ## Related
