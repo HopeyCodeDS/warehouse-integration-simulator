@@ -1,8 +1,12 @@
 # Warehouse Integration Simulator
 
+_A local warehouse integration simulator for ERP, WMS, MQTT, PLC, robot, and HMI workflow testing._
+
 [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml) [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](services/erp-api/) [![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)](frontend/react-dashboard/) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)](database/) [![MQTT](https://img.shields.io/badge/MQTT-660066?style=flat-square&logo=mqtt&logoColor=white)](services/mqtt-broker/)
 
-This project is a local simulation of a warehouse integration architecture connecting an ERP, a WMS, a message broker, warehouse automation services, and a UI dashboard. It is intended to model the movement of orders from business systems into physical execution flows, including queueing, task dispatch, and completion feedback.
+![HMI dashboard screenshot](assets/initial-hmi-dashboard.png)
+
+This project is a local simulation of a warehouse integration architecture connecting an ERP, a WMS, a message broker, warehouse automation services, and operator-facing user interfaces. It is intended to model the movement of orders from business systems into physical execution flows, including queueing, task dispatch, and completion feedback.
 
 The repository is organized as a small multi-service Docker application. The code is focused on demonstrating integration patterns rather than production deployment readiness.
 
@@ -16,7 +20,8 @@ The system includes:
 - an MQTT broker for asynchronous messaging
 - a PLC simulator and OPC UA gateway
 - a robot simulator that moves through warehouse states
-- a React dashboard that visualizes the warehouse and event flow
+- a React dashboard for operator monitoring and order dispatch
+- a realistic HMI for 2D/3D floor visualization, order dispatch and telemetry
 - PostgreSQL schemas for ERP, WMS, and integration data
 
 The project is designed to show how services communicate across bounded contexts using explicit interfaces such as REST and MQTT.
@@ -24,6 +29,19 @@ The project is designed to show how services communicate across bounded contexts
 ## Technical Documentation
 
 Use the [documentation index](docs/README.md) for architecture notes, implementation history, acceptance documents, ADRs, and reusable implementation-note templates. The [project engineering log](docs/PROJECT-LOG.md) is the append-only record of ongoing changes and validation results.
+
+## Demo Media
+
+The repository includes current visual assets that can be used in the README or linked from release notes:
+
+| Asset | What it shows |
+| --- | --- |
+| [HMI dashboard screenshot](assets/initial-hmi-dashboard.png) | A static top-level view of the live operator dashboard, order dispatch panel, and integration monitor. |
+| [2D initial demo video](assets/2D-initial-demo.mp4) | The 2D floor view in motion, showing the warehouse layout, robot movement, and live telemetry updates. |
+| [3D initial demo video](assets/3D-initial-demo.mp4) | The immersive 3D twin view with spatial context for robots, conveyors, and dock activity. |
+| [Commissioning mode demo video](assets/commissioning-mode-demo.mp4) | The commissioning and validation workflow, useful for showing operational checks and site-readiness behavior. |
+
+The screenshot is the best top-of-page visual. The videos are best used as linked demo evidence with short descriptions because they are larger files and are easier to browse that way.
 
 ## Architecture
 
@@ -119,14 +137,14 @@ Relevant code:
 
 - `services/robot-simulator/worker.py`
 
-### React Dashboard
+### Frontends
 
-The frontend contains a live visualization of the warehouse floor and system events. It is used for monitoring and order dispatch.
+The repository keeps two active user interfaces on `main`:
 
-Relevant directories:
+- `frontend/react-dashboard` for operator monitoring, order dispatch, and live integration logs
+- `frontend/realistic-wis-hmi` for the richer warehouse floor visualization and telemetry view
 
-- `frontend/react-dashboard`
-- `frontend/digital-twin`
+The earlier `frontend/digital-twin` and `frontend/wis-digital-Twin-v2` frontends are being retired/archived so the branch stays focused and easier to merge.
 
 ## Repository structure
 
@@ -144,7 +162,8 @@ warehouse-integration-simulator/
 │   ├── templates/
 │   └── adr/
 ├── frontend/
-│   └── digital-twin/
+│   ├── react-dashboard/
+│   └── realistic-wis-hmi/
 ├── services/
 │   ├── erp-api/
 │   ├── integration-engine/
@@ -217,15 +236,23 @@ From the project root:
 docker compose up -d --build
 ```
 
-Then, for the frontend dashboard:
+Then, for the operator dashboard:
 
 ```bash
-cd frontend/digital-twin
+cd frontend/react-dashboard
 npm install
 npm run dev
 ```
 
-The dashboard is typically served on a local Vite port, such as `http://localhost:5174` depending on your local configuration.
+The dashboard is typically served on a local Vite port, such as `http://localhost:5173` depending on your local configuration.
+
+For the realistic HMI view:
+
+```bash
+cd frontend/realistic-wis-hmi
+npm install
+npm run dev
+```
 
 To run the end-to-end order-flow tests, start the Docker stack first and run:
 
