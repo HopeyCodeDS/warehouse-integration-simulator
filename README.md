@@ -34,7 +34,7 @@ The repository includes current visual assets that can be used in the README or 
 
 ### HMI Dashboard Screenshot
 
-_Initial demo version of the operator view._
+Initial demo version of the operator view.
 
 This is the top-level operator view: a compact command surface for dispatch, live MQTT status, robot state, and commissioning checks.
 
@@ -42,25 +42,21 @@ This is the top-level operator view: a compact command surface for dispatch, liv
 
 ### Commissioning Mode Demo
 
-This clip shows the site-validation flow, focusing on readiness checks, diagnostics, and the operational confidence loop before release.
+Site-validation flow, with readiness checks, diagnostics, and the operational confidence loop before release.
 
-<video src="assets/commissioning-mode-demo.mp4" controls width="100%"></video>
+[Open commissioning-mode-demo.mp4](assets/commissioning-mode-demo.mp4)
 
 ### 2D Initial Demo
 
-This clip shows the warehouse as a live floor map, with robot movement, dock activity, and telemetry updates unfolding in real time.
+Live floor-map view showing robot movement, dock activity, and telemetry updates in real time.
 
-<video src="assets/2D-initial-demo.mp4" controls width="100%"></video>
+[Open 2D-initial-demo.mp4](assets/2D-initial-demo.mp4)
 
 ### 3D Initial Demo
 
-This clip shows the immersive twin view, where the same operations gain depth, spatial context, and a more cinematic sense of scale.
+Immersive twin view with spatial context and a more cinematic sense of scale.
 
-<video src="assets/3D-initial-demo.mp4" controls width="100%"></video>
-
-The screenshot works best as the quick at-a-glance entry point, while the videos provide the richer operational story for each mode.
-
-These visuals reflect the current tagged release state of the project. The simulator is still under active development, so the presentation, interactions, and overall quality will continue to be refined in upcoming releases.
+[Open 3D-initial-demo.mp4](assets/3D-initial-demo.mp4)
 
 ## Architecture
 
