@@ -32,16 +32,35 @@ Use the [documentation index](docs/README.md) for architecture notes, implementa
 
 ## Demo Media
 
-The repository includes current visual assets that can be used in the README or linked from release notes:
+The repository includes current visual assets that can be used in the README or linked from release notes.
 
-| Asset | What it shows |
-| --- | --- |
-| [HMI dashboard screenshot](assets/initial-hmi-dashboard.png) | A static top-level view of the live operator dashboard, order dispatch panel, and integration monitor. |
-| [2D initial demo video](assets/2D-initial-demo.mp4) | The 2D floor view in motion, showing the warehouse layout, robot movement, and live telemetry updates. |
-| [3D initial demo video](assets/3D-initial-demo.mp4) | The immersive 3D twin view with spatial context for robots, conveyors, and dock activity. |
-| [Commissioning mode demo video](assets/commissioning-mode-demo.mp4) | The commissioning and validation workflow, useful for showing operational checks and site-readiness behavior. |
+### HMI Dashboard Screenshot
 
-The screenshot is the best top-of-page visual. The videos are best used as linked demo evidence with short descriptions because they are larger files and are easier to browse that way.
+This is the top-level operator view: a compact command surface for dispatch, live MQTT status, robot state, and commissioning checks.
+
+![HMI dashboard screenshot](assets/initial-hmi-dashboard.png)
+
+### Commissioning Mode Demo
+
+This clip shows the site-validation flow, focusing on readiness checks, diagnostics, and the operational confidence loop before release.
+
+<video src="assets/commissioning-mode-demo.mp4" controls width="100%"></video>
+
+### 2D Initial Demo
+
+This clip shows the warehouse as a live floor map, with robot movement, dock activity, and telemetry updates unfolding in real time.
+
+<video src="assets/2D-initial-demo.mp4" controls width="100%"></video>
+
+### 3D Initial Demo
+
+This clip shows the immersive twin view, where the same operations gain depth, spatial context, and a more cinematic sense of scale.
+
+<video src="assets/3D-initial-demo.mp4" controls width="100%"></video>
+
+The screenshot works best as the quick at-a-glance entry point, while the videos provide the richer operational story for each mode.
+
+These visuals reflect the current tagged release state of the project. The simulator is still under active development, so the presentation, interactions, and overall quality will continue to be refined in upcoming releases.
 
 ## Architecture
 
