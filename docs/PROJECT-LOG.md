@@ -2,6 +2,28 @@
 
 This is the append-only technical record for implementation work in the Warehouse Integration Simulator. Add the newest entry at the top. Keep entries concise but concrete enough to reconstruct why a change exists and how it was verified.
 
+## 2026-09-21 - README Scope and Backlog Clarification
+
+### Intent
+
+Keep the root README focused on the current simulator story while moving broader engineering backlog items into the project log.
+
+### Implemented
+
+- Tightened the README limitations section to the two project-specific simulation gaps that matter most to readers.
+- Added an explicit note in the README that broader engineering backlog items are tracked in this project log instead of being listed in the top-level README.
+
+### Backlog
+
+- Retry hardening and service-to-service resilience improvements.
+- Richer error handling for cross-service calls and operational failures.
+- Broader observability and metrics for the running stack.
+- Production-grade deployment practices and environment hardening.
+
+### Remaining Boundary
+
+- These backlog items stay intentionally out of the root README so the top-level narrative stays centered on the simulator, the current demos, and the agentic AI direction.
+
 ## 2026-09-20 - Demo Media and Sample Cleanup
 
 ### Intent

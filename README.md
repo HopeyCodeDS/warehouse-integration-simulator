@@ -6,7 +6,7 @@ _A local warehouse integration simulator for ERP, WMS, MQTT, PLC, robot, and HMI
 
 ![HMI dashboard screenshot](assets/initial-hmi-dashboard.png)
 
-This project is a local simulation of a warehouse integration architecture connecting an ERP, a WMS, a message broker, warehouse automation services, and operator-facing user interfaces. It is intended to model the movement of orders from business systems into physical execution flows, including queueing, task dispatch, and completion feedback.
+This project is a local simulation of a warehouse integration architecture connecting an ERP, a WMS, a message broker, warehouse automation services, and operator-facing user interfaces. It is intended to model the movement of orders from business systems into physical execution flows, including queueing, task dispatch, and completion feedback. The longer-term aim is to use the simulator as a foundation for agentic AI workflows that can optimize intralogistics decisions, orchestration, and operational coordination.
 
 The repository is organized as a small multi-service Docker application. The code is focused on demonstrating integration patterns rather than production deployment readiness.
 
@@ -304,17 +304,14 @@ The project is not presented as a production-ready system; it is an environment 
 
 ## Known gaps / limitations
 
-This project is intentionally simplified. Some areas that are still limited or incomplete include:
+This project is intentionally simplified so the architecture stays readable and easy to validate. The main gaps that remain are:
 
-- retry logic and resilience patterns
-- more complete error handling in service-to-service calls
-- broader observability and metrics
-- production-grade deployment practices
-- more realistic warehouse inventory and routing logic
 - an authoritative simulation clock that can pause, resume, or step every backend process in lockstep
 - full historical replay that can reconstruct a completed run from ordered simulation events and ticks
 
 The current `services/simulation-control/manager.py` service is a lightweight control plane for simulation state, not a global time source. Robots, the PLC simulator, and integration workers still advance on their own loops, so the simulation remains operationally useful but not yet deterministic in the replayable sense described above.
+
+Broader engineering backlog items such as retry hardening, richer error handling, observability, and deployment refinement are tracked in [docs/PROJECT-LOG.md](docs/PROJECT-LOG.md).
 
 ## Development notes
 
