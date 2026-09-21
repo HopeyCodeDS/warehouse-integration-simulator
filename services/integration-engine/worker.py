@@ -33,8 +33,20 @@ class IntegrationEvent(Base):
     source = Column(String)
     destination = Column(String)
     event_type = Column(String)
+    correlation_id = Column(String)
     payload = Column(JSONB)
     status = Column(String)
+
+
+def record_event(db, source, destination, event_type, payload, status="PROCESSED", correlation_id=None):
+    db.add(IntegrationEvent(
+        source=source,
+        destination=destination,
+        event_type=event_type,
+        correlation_id=correlation_id,
+        payload=payload,
+        status=status,
+    ))
 
 completion_queue = Queue()
 
@@ -56,10 +68,23 @@ def process_order_created(event, db):
     response = requests.post(settings.WMS_API_URL, json=wms_payload, timeout=5)
     if response.status_code == 201:
         event.status = "PROCESSED"
+        record_event(db, "Integration_Engine", "WMS", "TASK_DISPATCHED", {
+            "order_number": erp_data["order_number"],
+            "task_id": response.json().get("task_id"),
+            "payload": wms_payload,
+        }, correlation_id=erp_data.get("correlation_id"))
         print(f"[Engine] ✅ {erp_data['order_number']} -> WMS (allocated)")
     else:
         event.status = "FAILED"
-        print(f"[Engine] ❌ WMS rejected {erp_data['order_number']}: {response.json().get('detail')}")
+        record_event(db, "Integration_Engine", "WMS", "TASK_REJECTED", {
+            "order_number": erp_data["order_number"],
+            "detail": response.text,
+        }, status="FAILED", correlation_id=erp_data.get("correlation_id"))
+        try:
+            detail = response.json().get("detail", response.text)
+        except ValueError:
+            detail = response.text
+        print(f"[Engine] ❌ WMS rejected {erp_data['order_number']}: {detail}")
 
 def process_order_completed(data, db):
     # Close the loop: tell the ERP its order is done
@@ -67,6 +92,7 @@ def process_order_completed(data, db):
         f"{settings.ERP_API_URL}/{data['order_number']}/status",
         json={"status": "COMPLETED"}, timeout=5)
     log = IntegrationEvent(source="WMS", destination="ERP", event_type="ORDER_COMPLETED",
+                           correlation_id=data.get("correlation_id"),
                            payload=data, status="PROCESSED" if resp.ok else "FAILED")
     db.add(log)
     print(f"[Engine] 📦 {data['order_number']} marked COMPLETED in ERP")

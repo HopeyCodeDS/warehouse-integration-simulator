@@ -1,300 +1,352 @@
-# Warehouse Integration Simulator (WIS)
+# Warehouse Integration Simulator
 
-**A production-inspired warehouse automation platform simulating how ERP systems, WMS, PLCs, and robots communicate through an event-driven, IT/OT-converged architecture.**
+_A local warehouse integration simulator for ERP, WMS, MQTT, PLC, robot, and HMI workflow testing._
 
-![Status](https://img.shields.io/badge/Status-In_Development-blue?style=flat-square) ![ISA-95](https://img.shields.io/badge/Standard-ISA--95%20IT%2FOT-0052CC?style=flat-square) ![VDA 5050](https://img.shields.io/badge/Standard-VDA%205050-2E7D32?style=flat-square) ![UNS](https://img.shields.io/badge/Architecture-Unified%20Namespace-6A1B9A?style=flat-square) ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi) ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat-square&logo=postgresql&logoColor=white) ![MQTT](https://img.shields.io/badge/MQTT-660066?style=flat-square&logo=mqtt&logoColor=white) ![OPC UA](https://img.shields.io/badge/OPC%20UA-003366?style=flat-square) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
+[![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml) [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](services/erp-api/) [![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)](frontend/react-dashboard/) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)](database/) [![MQTT](https://img.shields.io/badge/MQTT-660066?style=flat-square&logo=mqtt&logoColor=white)](services/mqtt-broker/)
 
-> 💡 **Built for Industrial Systems Engineering:** Implements strict IT/OT separation, VDA 5050 fleet execution over MQTT, OPC UA hardware tag subscriptions, and domain-driven microservices.
+This project is a local simulation of a warehouse integration architecture connecting an ERP, a WMS, a message broker, warehouse automation services, and operator-facing user interfaces. It is intended to model the movement of orders from business systems into physical execution flows, including queueing, task dispatch, and completion feedback. The longer-term aim is to use the simulator as a foundation for agentic AI workflows that can optimize intralogistics decisions, orchestration, and operational coordination.
 
-![WIS HMI Dashboard](assets/hmi-dashboard.png)  
+The repository is organized as a small multi-service Docker application. The code is focused on demonstrating integration patterns rather than production deployment readiness.
 
-*The live HMI: command center, OT telemetry, and the MQTT integration monitor.* 
+## Overview
 
----
+The system includes:
 
-## Why I'm Building This
+- an ERP API for creating and tracking orders
+- a WMS API for inventory allocation and task processing
+- an integration engine that polls pending events and forwards them
+- an MQTT broker for asynchronous messaging
+- a PLC simulator and OPC UA gateway
+- a robot simulator that moves through warehouse states
+- a React dashboard for operator monitoring and order dispatch
+- a realistic HMI for 2D/3D floor visualization, order dispatch and telemetry
+- PostgreSQL schemas for ERP, WMS, and integration data
 
-Most warehouse projects stop at simple CRUD stock tracking. WIS focuses on the distributed systems engineering required to run an automated floor.
+The project is designed to show how services communicate across bounded contexts using explicit interfaces such as REST and MQTT.
 
-Warehouse Integration Simulator (WIS) explores the engineering behind real intralogistics systems: asynchronous communication, industrial protocols, robotics coordination, and systems integration.
+## Technical Documentation
 
-Rather than focusing on a single application, WIS simulates how multiple independent systems collaborate inside an automated warehouse; from order creation in an ERP, through allocation in a WMS, to execution by robots and PLC-controlled equipment, and back again through confirmation events that close the loop.
+Use the [documentation index](docs/README.md) for architecture notes, implementation history, acceptance documents, ADRs, and reusable implementation-note templates. The [project engineering log](docs/PROJECT-LOG.md) is the append-only record of ongoing changes and validation results.
 
-This project is built in public from an engineering perspective: the architecture, decisions, trade-offs, and progress are documented openly in this repository.
+## Demo Media
 
----
+The repository includes current visual assets that can be used in the README or linked from release notes.
 
-## System Architecture
+### HMI Dashboard Screenshot
+
+_Initial demo version of the operator view._
+
+This is the top-level operator view: a compact command surface for dispatch, live MQTT status, robot state, and commissioning checks.
+
+![HMI dashboard screenshot](assets/initial-hmi-dashboard.png)
+
+### Commissioning Mode Demo
+
+This clip shows the site-validation flow, focusing on readiness checks, diagnostics, and the operational confidence loop before release.
+
+<video src="assets/commissioning-mode-demo.mp4" controls width="100%"></video>
+
+### 2D Initial Demo
+
+This clip shows the warehouse as a live floor map, with robot movement, dock activity, and telemetry updates unfolding in real time.
+
+<video src="assets/2D-initial-demo.mp4" controls width="100%"></video>
+
+### 3D Initial Demo
+
+This clip shows the immersive twin view, where the same operations gain depth, spatial context, and a more cinematic sense of scale.
+
+<video src="assets/3D-initial-demo.mp4" controls width="100%"></video>
+
+The screenshot works best as the quick at-a-glance entry point, while the videos provide the richer operational story for each mode.
+
+These visuals reflect the current tagged release state of the project. The simulator is still under active development, so the presentation, interactions, and overall quality will continue to be refined in upcoming releases.
+
+## Architecture
 
 ```mermaid
 flowchart LR
   subgraph IT["IT Layer"]
     HMI["HMI Dashboard"]
     ERP["ERP API"]
-    IE["Integration Engine (WES)"]
+    IE["Integration Engine"]
     WMS["WMS API"]
-    DB[("PostgreSQL\n(erp / wms / integration)")]
+    COM["Commissioning API"]
+    DB[("PostgreSQL\nerp / wms / integration")]
   end
   subgraph OT["OT Layer"]
-    PLC["PLC Simulator\n(OPC UA)"]
+    PLC["PLC Simulator"]
     GW["OPC UA Gateway"]
-    AMR["Robot Simulator (AMR)\n(VDA 5050 inspired)"]
+    AMR["Robot Simulator"]
   end
-  MQTT{{"MQTT Broker (UNS)"}}
+  MQTT{{"MQTT Broker"}}
 
-  HMI -->|REST| ERP
-  ERP -->|transactional outbox| DB
-  IE -->|Poll| DB
-  IE -->|REST tasks| WMS
-  WMS -->|tasks/new| MQTT
-  MQTT --> AMR
-  AMR -->|telemetry / completion| MQTT
-  PLC -->|Tags| GW
-  GW -->|Sensor Events| MQTT
-  MQTT -->|WebSockets| HMI
-  MQTT -->|orders/completed| IE
-  IE -->|PATCH order status| ERP
+  HMI -->|REST: dispatch order| ERP
+  HMI -->|REST: run validation| COM
+  HMI -.->|subscribe ws://| MQTT
+  ERP -->|SQL: orders + outbox| DB
+  IE -->|SQL: poll outbox / log events| DB
+  IE -->|REST: translated task| WMS
+  IE -->|REST: PATCH order status| ERP
+  WMS -->|SQL: allocate / decrement| DB
+  WMS -->|MQTT: tasks/new| MQTT
+  WMS -.->|MQTT: sub tasks/completed| MQTT
+  MQTT -->|MQTT: dispatch| AMR
+  AMR -->|MQTT: telemetry + receipt| MQTT
+  MQTT -->|MQTT: orders/completed| IE
+  PLC -->|OPC UA: typed tags| GW
+  GW -->|MQTT: sensor events| MQTT
+  COM -.->|health probes| DB
+  COM -.->|health probes| ERP
+  COM -.->|health probes| WMS
+  COM -.->|health probes| MQTT
+  COM -.->|health probes| PLC
 ```
 
-This mirrors the real IT/OT separation used in industrial environments: ERP and WMS live in IT; PLCs, conveyors, and robots live in OT; an integration layer connects them through REST, OPC UA, and MQTT.
+## Service responsibilities
 
----
+### ERP API
 
-## Core Components
+The ERP service owns the business order lifecycle. It creates orders, persists their state, and records outbound integration events.
 
-| Component            | Responsibility |
-| -------------------- | -------------- |
-| ERP Service          | Order management & business operations (source of business truth) |
-| WMS Service          | Inventory, locations, stock allocation, task confirmation & stock movement |
-| Integration Engine   | Event orchestration & translation between bounded contexts (ERP ↔ WMS) |
-| MQTT Broker          | Asynchronous message transport (pub/sub + WebSocket bridge) |
-| PLC Simulator        | Industrial device communication using OPC UA (strongly-typed tags, subscriptions) |
-| OPC UA Gateway       | Bridges OT tag changes into the MQTT event bus |
-| Robot Simulator      | Warehouse task execution via a physical state machine (IDLE → MOVING → DOCKED) |
-| HMI Dashboard        | Operator monitoring & command center (event-driven UI over MQTT WebSockets) |
-| PostgreSQL           | Service-owned data in three bounded-context schemas: `erp`, `wms`, `integration` |
+Relevant code:
 
----
+- `services/erp-api/app/main.py`
+- `services/erp-api/app/models.py`
 
-## Guiding Principles
+### WMS API
 
-- Event-driven communication
-- Service-owned data (bounded contexts): each service touches only its own schema; no cross-service table access
-- Loosely coupled architecture; systems communicate only through explicit contracts (REST / MQTT)
-- Industrial communication via OPC UA
-- Observability as a first-class concern (integration event log + correlation IDs across every hop)
-- Fail-fast, environment-driven configuration (no secrets in code)
-- Documented decisions (ADRs) over tribal knowledge
+The WMS service handles inventory and task allocation. It receives translated ERP tasks, validates capacity, and emits task-related status updates.
 
----
+Relevant code:
 
-## Technology Stack
+- `services/wms-api/app/main.py`
+- `services/wms-api/app/models.py`
 
-| Layer               | Technology |
-| ------------------- | ---------- |
-| Backend             | FastAPI (Python) |
-| Frontend            | React (Vite) |
-| Database            | PostgreSQL (JSONB, UUID, multi-schema) |
-| Messaging           | MQTT (Mosquitto, QoS 1, WebSockets) |
-| Industrial Protocol | OPC UA (asyncua) |
-| Infrastructure      | Docker & Docker Compose |
-| API Contract        | OpenAPI / Swagger (auto-generated) |
+### Integration Engine
 
----
+The integration engine is the orchestration layer between ERP and WMS. It polls pending records from the integration event table, processes them, and sends follow-up updates to the downstream services.
 
-## Current Features
+Relevant code:
 
-- **ERP order creation** over REST with strict Pydantic validation and OpenAPI docs
-- **Interactive warehouse HMI**: live MQTT monitor + Command Center that dispatches real orders
-- **Closed-loop execution**: allocation → dispatch → physical execution → confirmation → inventory decrement → order completion
-- **Transactional outbox** in the ERP, polled by the Integration Engine (reliable messaging without two-phase commit)
-- **Correlation IDs** propagated across ERP → Integration → WMS → MQTT → Robot telemetry
-- **OPC UA PLC simulator** with strongly-typed tags (`Running`, `Speed`, `Sensor_Dock3`) and data-change subscriptions
-- **OPC UA → MQTT gateway** bridging OT events into the IT event bus
-- **Robot state machine** with real-time telemetry feedback
-- **Modular microservice architecture**: independently deployable services, one Docker network
-- **Environment-driven, fail-fast configuration** (`.env` + `.env.example`, no baked-in secrets)
+- `services/integration-engine/worker.py`
 
----
+### MQTT Broker
 
-## Development Roadmap
+The broker provides asynchronous messaging between services and the UI. It is also used for telemetry and task completion callbacks.
 
-### Phase 1 — Core Platform ✅
-- [x] ERP Service
-- [x] Interactive HMI Dashboard
-- [x] REST API Integration
-- [x] MQTT Event Bus
-- [x] PostgreSQL persistence refinement (bounded-context schemas, seed data)
+Relevant config:
 
-### Phase 2 — Industrial Integration ✅
-- [x] PLC Simulator (OPC UA)
-- [x] Robot State Machine
-- [x] Conveyor & sensor simulation
-- [x] OPC UA → MQTT gateway
-- [ ] Device health monitoring (Commissioning Mode)
+- `services/mqtt-broker/mosquitto.conf`
 
-### Phase 3 — Warehouse Execution ✅
-- [x] Task Dispatch Engine (Integration Engine + WMS allocation)
-- [x] Inventory Movement Simulation (stock decrement on confirmation)
-- [x] Robot Acknowledgement Workflow (completion receipts)
-- [ ] Error recovery scenarios (reconnection, retry, backoff)
+### OPC UA PLC Simulator and Gateway
 
-### Phase 4 — Production Readiness 🚧
-- [ ] Commissioning Mode + FAT/SAT test documentation
-- [ ] Event-replay drawer & digital-twin warehouse map
-- [ ] Structured logging & metrics
-- [ ] Integration / contract testing
-- [x] Docker deployment (Compose)
-- [ ] CI/CD pipeline
-- [ ] Version 1.0 release + 30-second demo video
+The PLC simulator provides industrial-style tag data, and the gateway translates these device events into MQTT traffic for the rest of the system.
 
----
+Relevant code:
 
-## Engineering Decisions
+- `services/opcua-plc-simulator/server.py`
+- `services/opcua-gateway/gateway.py`
 
-This project intentionally models how enterprise warehouse software is designed rather than how traditional monolithic applications are built. See `docs/adr/` for the full record. The Integration Engine acts as a lightweight WES (Warehouse Execution System) layer, orchestrating business tasks from the WMS and translating them into physical execution commands for the OT/MQTT layer.
+### Robot Simulator
 
-### Why Event-Driven?
-Warehouse equipment operates asynchronously. An ERP should not directly control PLCs or robots, it publishes business facts; the OT layer reacts.
+The robot simulator follows a state machine such as IDLE, MOVING, and DOCKED. It emits telemetry and completion events back into the integration flow.
 
-### Why a Transactional Outbox?
-The ERP writes the order **and** the integration event in one DB transaction. The Integration Engine polls and forwards it. No event is ever lost if the broker is down, and no two-phase commit is needed.
+Relevant code:
 
-### The Closed Loop (An example workflow)
+- `services/robot-simulator/worker.py`
 
-```
-ERP ──(outbox)──▶ Integration Engine ──▶ WMS (allocates stock)
- ▲                                            │  MQTT: tasks/new
- │                                            ▼
- └── ERP order COMPLETED ◀── WMS decrements ◀─ Robot executes & confirms
-```
+### Frontends
 
-1. ERP creates the order and logs a `PENDING` integration event (with correlation ID).
-2. Integration Engine translates ERP language → WMS language and calls the WMS API.
-3. WMS **allocates** inventory (rejects with 409 if stock is insufficient) and dispatches the task over MQTT.
-4. The robot executes its state machine and publishes a completion receipt.
-5. WMS marks the task `COMPLETED`, decrements inventory, and publishes `orders/completed`.
-6. The Integration Engine patches the ERP order to `COMPLETED`. The loop is closed.
+The repository keeps two active user interfaces on `main`:
 
----
+- `frontend/react-dashboard` for operator monitoring, order dispatch, and live integration logs
+- `frontend/realistic-wis-hmi` for the richer warehouse floor visualization and telemetry view
 
-## Real-World & Industry Standards Alignment
+The earlier `frontend/digital-twin` and `frontend/wis-digital-Twin-v2` frontends are being retired/archived so the branch stays focused and easier to merge.
 
-WIS is designed explicitly around production intralogistics standards:
-
-- **ANSI/ISA-95 (Enterprise-Control System Integration):** Architected according to ISA-95 principles, separating enterprise/IT business workflows (ERP/WMS) from OT operational/physical execution (PLCs/Robots).
-- **VDA 5050 (AGV/AMR Fleet Protocol):** Task assignment, state machine reporting (`IDLE` → `MOVING` → `DOCKED`), and live telemetry topics inspired by VDA 5050 MQTT messaging concepts.
-- **Unified Namespace (UNS):** Uses MQTT as a centralized, decoupled state bus rather than legacy point-to-point polling links.
-- **OPC UA Gateway Pattern:** Emulates real edge computing where raw hardware tags (IEC 62541) are bridged into structured JSON events for high-level software consumption.
-- **Reliable Messaging (Transactional Outbox):** Implements enterprise Change Data Capture (CDC) principles to prevent dropped events between database writes and broker dispatch.
-
----
-
-## Repository Structure
+## Repository structure
 
 ```text
 warehouse-integration-simulator/
-│
-├── services/
-│   ├── erp-api/               # FastAPI: orders, validation, outbox
-│   ├── wms-api/               # FastAPI: allocation, confirmation, stock movement
-│   ├── integration-engine/    # Outbox poller + translator + completion handler
-│   ├── opcua-plc-simulator/   # asyncua OPC UA server (conveyor tags)
-│   ├── opcua-gateway/         # OPC UA subscription → MQTT bridge
-│   ├── robot-simulator/       # AMR state machine + telemetry
-│   └── mqtt-broker/           # Mosquitto config (TCP + WebSockets)
-│
-├── frontend/
-│   └── react-dashboard/       # HMI: monitor + command center
-│
-├── database/                  # Schema DDL + seed data (erp / wms / integration)
+├── database/
+│   ├── 01_schemas.sql
+│   ├── 02_erp_schema.sql
+│   ├── 03_wms_schema.sql
+│   ├── 04_integration_schema.sql
+│   └── 05_seed_data.sql
 ├── docs/
-│   ├── adr/                   # Architecture Decision Records
-│   └── architecture.md
-├── assets/                    # Screenshots & demo media
+│   ├── README.md
+│   ├── PROJECT-LOG.md
+│   ├── templates/
+│   └── adr/
+├── frontend/
+│   ├── react-dashboard/
+│   └── realistic-wis-hmi/
+├── services/
+│   ├── erp-api/
+│   ├── integration-engine/
+│   ├── mqtt-broker/
+│   ├── opcua-gateway/
+│   ├── opcua-plc-simulator/
+│   ├── robot-simulator/
+│   └── wms-api/
 ├── docker-compose.yml
-├── .env.example
-└── README.md
+├── README.md
+└── .env.example
 ```
 
----
+## Database design
 
-## Quick Start
+The project uses PostgreSQL with separate schemas:
+
+- `erp` for ERP data
+- `wms` for warehouse inventory and tasks
+- `integration` for outbox-style integration events
+
+The integration schema includes an `integration_events` table used as the outbox. The structure is defined in `database/04_integration_schema.sql`.
+
+## Transactional outbox pattern
+
+This project implements the transactional outbox pattern in a simplified form.
+
+The flow is:
+
+1. The ERP writes the business record and the integration event in the same database transaction.
+2. The integration event is stored with a `PENDING` status.
+3. A worker polls the `integration_events` table.
+4. The worker processes the event and updates status to `PROCESSED` or `FAILED`.
+5. Downstream systems are triggered after the database write succeeds.
+
+This pattern prevents the "business commit succeeds but message dispatch is lost" problem without requiring a distributed two-phase commit.
+
+The relevant implementation is:
+
+- `services/erp-api/app/main.py` — creates the order and logs the event in the same transaction
+- `database/04_integration_schema.sql` — defines the outbox table
+- `services/integration-engine/worker.py` — polls pending events and handles processing
+
+## Typical workflow
+
+A normal order flow looks like this:
+
+1. A request is sent to the ERP API to create an order.
+2. The ERP creates the order and logs an `ORDER_CREATED` event as `PENDING`.
+3. The integration engine reads the row from `integration_events`.
+4. The engine translates the ERP payload into the WMS task format.
+5. The WMS validates the request and allocates inventory.
+6. The WMS emits task or completion events over MQTT.
+7. The robot simulator executes the assigned task and reports status.
+8. The integration layer updates the ERP order status based on completion events.
+
+## Prerequisites
+
+This project expects the following on the local machine:
+
+- Docker and Docker Compose
+- Node.js and npm for the frontend dashboard
+- Python for the service code and local development if needed
+
+## Technical Guide
+
+The project is designed to run locally with Docker for the backend stack and Vite for the frontends. A typical run sequence is:
+
+1. Start the backend services with Docker Compose.
+2. Start the operator dashboard or the realistic HMI in a separate terminal.
+3. Use the ERP API or the dashboard to create an order.
+4. Watch the MQTT flow, robot simulator, and completion callback update the system.
+
+### 1. Start the backend stack
+
+From the project root:
 
 ```bash
-git clone https://github.com/HopeyCodeDS/warehouse-integration-simulator
-cd warehouse-integration-simulator
-cp .env.example .env          # fill in local values
-docker compose up -d --build  # boots DB, ERP, WMS, engine, PLC, gateway, robot, broker
-
-cd frontend/react-dashboard
-npm install && npm run dev    # HMI at http://localhost:5173
+docker compose up -d --build
 ```
 
-Dispatch an order from the HMI Command Center and watch the full IT/OT loop execute live in the Integration Monitor.
+### 2. Start the operator dashboard
 
----
+```bash
+cd frontend/react-dashboard
+npm install
+npm run dev
+```
 
-## Project Status
+The dashboard is typically served on a local Vite port, such as `http://localhost:5173` depending on your local configuration.
 
-| Area                | Status |
-| ------------------- | ------ |
-| ERP                 | ✅ Active |
-| WMS                 | ✅ Active |
-| Integration Engine  | ✅ Active |
-| HMI Dashboard       | ✅ Active |
-| MQTT                | ✅ Active |
-| PLC Simulator       | ✅ Active |
-| Robot Dispatch      | ✅ Active |
-| Observability       | 🚧 Correlation IDs live; commissioning panel next |
+### 3. Start the realistic HMI
 
----
+```bash
+cd frontend/realistic-wis-hmi
+npm install
+npm run dev
+```
 
-## Key Engineering Challenges
+### 4. Run the end-to-end test flow
 
-| Challenge | Solution |
-|-----------|----------|
-| Reliable ERP → WMS messaging | Transactional Outbox |
-| End-to-end traceability | Correlation IDs |
-| Hardware event ingestion | OPC UA subscriptions |
-| Decoupled system communication | MQTT pub/sub |
-| Inventory consistency | Closed-loop confirmation workflow |
+To run the end-to-end order-flow tests, start the Docker stack first and run:
 
----
+```bash
+make e2e
+```
 
-## Future Horizon — Bounded AI Supervisor (Research Track) 🧪
+The test creates a uniquely named ERP order and waits for it to reach `COMPLETED`. This exercises the ERP API, transactional outbox, integration engine, WMS allocation, MQTT task dispatch, robot simulator, WMS completion handler, and ERP status callback. The default timeout is 90 seconds and can be changed with `E2E_TIMEOUT_SECONDS`.
 
-A bounded AI execution layer designed to augment — never replace — deterministic warehouse control. Every AI decision remains constrained by explicit operational safety rules.
+### 5. Stop the stack
 
-- [ ] **Deterministic Safety Envelope**  
-      Rule-based validation engine that intercepts every AI-generated routing or task proposal before execution. AI can recommend; only validated actions are dispatched.
+When you are done, stop the containers with:
 
-- [ ] **AI Optimization Agent**  
-      Reinforcement Learning / LLM-assisted supervisor that optimizes task prioritization, congestion avoidance, and fleet utilization without directly controlling hardware.
+```bash
+docker compose down
+```
 
-- [ ] **State Divergence & Fallback Engine**  
-      Continuously compares predicted warehouse state against live OPC UA and MQTT telemetry. When divergence exceeds defined thresholds, control automatically falls back to deterministic heuristic scheduling.
+## Environment configuration
 
-> **Design Principle:** The AI Supervisor never issues direct PLC or robot commands. It produces optimization proposals that must pass deterministic validation before entering the operational event bus.
----
+The repository includes an `.env.example` file. Copy it to `.env` and fill in the required values for your local environment before starting the stack.
 
-## Building in Public
+```bash
+cp .env.example .env
+```
 
-I document the engineering journey through this repository and on LinkedIn, including:
+## Current status
 
-- Architecture diagrams & ADRs
-- System design trade-offs
-- HMI demonstrations & warehouse workflow simulations
-- Real debugging war stories (OPC UA, MQTT, distributed systems)
-- Public roadmap and milestone tracking via GitHub Projects
+The repository is currently in an active development state. The core flow is implemented and the services are connected through Docker and message flow. The main areas in place include:
 
-**v1.0 target:** Commissioning Mode, FAT/SAT, CI/CD, and a 30-second cinematic demo.
+- ERP order creation
+- WMS allocation logic
+- integration event polling
+- MQTT communication
+- robot state simulation
+- warehouse visualization in the frontend
 
----
+The project is not presented as a production-ready system; it is an environment for experimenting with warehouse integration patterns.
 
-## Author
+## Known gaps / limitations
 
-**Opeyemi Momodu**  
-AI Software Engineer • Systems Integration • Warehouse Automation • Event-Driven Architecture
+This project is intentionally simplified so the architecture stays readable and easy to validate. The main gaps that remain are:
 
-Building software where enterprise systems, industrial automation, and AI intersect.
+- an authoritative simulation clock that can pause, resume, or step every backend process in lockstep
+- full historical replay that can reconstruct a completed run from ordered simulation events and ticks
+
+The current `services/simulation-control/manager.py` service is a lightweight control plane for simulation state, not a global time source. Robots, the PLC simulator, and integration workers still advance on their own loops, so the simulation remains operationally useful but not yet deterministic in the replayable sense described above.
+
+Broader engineering backlog items such as retry hardening, richer error handling, observability, and deployment refinement are tracked in [docs/PROJECT-LOG.md](docs/PROJECT-LOG.md).
+
+## Development notes
+
+This project is useful for understanding how several industrial and enterprise patterns interact in one local system:
+
+- bounded context ownership
+- event-driven communication
+- asynchronous integration via broker transport
+- outbox-based reliable messaging
+- cross-service workflow orchestration
+- OT/IT separation in warehouse automation
+
+## License
+
+This repository does not currently declare a license in the project root. Check the repository state before reusing it in a public or production environment.
+
+## Notes
+
+This project is best treated as a working simulation and architecture example rather than a turnkey production platform. The value is in the patterns, the service boundaries, and the code flow between business and operational systems.

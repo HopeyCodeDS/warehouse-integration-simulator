@@ -1,50 +1,119 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import mqtt from 'mqtt';
 
 const MQTT_BROKER_WS = 'ws://localhost:9001';
 const ERP_API_URL = 'http://localhost:8000/api/orders';
 
+const formatLogMessage = (msg) => {
+  if (typeof msg !== 'object' || msg === null) return msg;
+  return JSON.stringify(msg, (_, value) => value === null ? undefined : value);
+};
+
 function App() {
   const [connected, setConnected] = useState(false);
   const [robotState, setRobotState] = useState('OFFLINE');
   const [currentOrder, setCurrentOrder] = useState(null);
+  const [currentCorrelationId, setCurrentCorrelationId] = useState(null);
   const [sensorTriggered, setSensorTriggered] = useState(false);
   const [liveLogs, setLiveLogs] = useState([]);
+  const [isChecking, setIsChecking] = useState(false);
+  const [healthStatus, setHealthStatus] = useState(null);
 
   // Command Center State
-  const [customer, setCustomer] = useState('Toyota');
+  const [customer, setCustomer] = useState('Acme Manufacturing');
   const [sku, setSku] = useState('P100');
   const [quantity, setQuantity] = useState(1);
   const [dock, setDock] = useState('Dock-3');
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchMsg, setDispatchMsg] = useState(null);
+  const nextSequence = useRef(1042);
+  const lastRobotLogRef = useRef({ robotId: null, state: null, waypointIndex: null, orderNumber: null });
+
+  const addLog = (source, msg) => {
+    const newLog = {
+      time: new Date().toLocaleTimeString(),
+      source,
+      msg: formatLogMessage(msg)
+    };
+    setLiveLogs(prev => [...prev, newLog].slice(-100));
+  };
+
+  const runDiagnostics = async () => {
+    setIsChecking(true);
+    try {
+      const res = await fetch('http://localhost:8002/api/health-check');
+      setHealthStatus(await res.json());
+    } catch (err) {
+      console.error('Diagnostics failed', err);
+    } finally {
+      setIsChecking(false);
+    }
+  };
 
   useEffect(() => {
     const client = mqtt.connect(MQTT_BROKER_WS);
+    const monitoredTopics = [
+      'warehouse/robot/state',
+      'warehouse/tasks/new',
+      'warehouse/events/sensor',
+      'warehouse/orders/completed',
+    ];
 
     client.on('connect', () => {
       setConnected(true);
-      client.subscribe('warehouse/#');
+      client.subscribe(monitoredTopics);
       addLog('SYSTEM', 'Dashboard connected to MQTT Broker');
     });
 
     client.on('message', (topic, message) => {
       try {
         const payload = JSON.parse(message.toString());
-        addLog(topic, payload);
 
         if (topic === 'warehouse/robot/state') {
           setRobotState(payload.state);
           if (payload.order_number) setCurrentOrder(payload.order_number);
+          if (payload.correlation_id) setCurrentCorrelationId(payload.correlation_id);
+
+          const lastRobotLog = lastRobotLogRef.current;
+          const robotId = payload.robot_id || 'robot';
+          const waypointIndex = typeof payload.waypoint_index === 'number' ? payload.waypoint_index : null;
+
+          if (lastRobotLog.robotId !== robotId || lastRobotLog.state !== payload.state) {
+            addLog('ROBOT', `${robotId} state -> ${payload.state}`);
+          }
+
+          if (payload.state === 'MOVING' && waypointIndex !== null && waypointIndex !== lastRobotLog.waypointIndex) {
+            const routeLength = Array.isArray(payload.route) ? payload.route.length : null;
+            const waypointText = routeLength ? `${waypointIndex + 1}/${routeLength}` : `${waypointIndex + 1}`;
+            addLog('ROBOT', `${robotId} moved to waypoint ${waypointText}`);
+          }
+
+          if (payload.state === 'DOCKED' && lastRobotLog.state !== 'DOCKED') {
+            addLog('ROBOT', `${robotId} docked for order ${payload.order_number || 'unknown order'}`);
+          }
+
+          lastRobotLogRef.current = {
+            robotId,
+            state: payload.state,
+            waypointIndex,
+            orderNumber: payload.order_number || null,
+          };
         } 
         else if (topic === 'warehouse/tasks/new') {
           setCurrentOrder(payload.order_number);
+          if (payload.correlation_id) setCurrentCorrelationId(payload.correlation_id);
+          addLog('WMS', `Task dispatched for ${payload.order_number || 'unknown order'} to ${payload.payload?.destination_dock || 'destination dock'}${payload.correlation_id ? ` [${payload.correlation_id}]` : ''}`);
         }
         else if (topic === 'warehouse/events/sensor') {
           if (payload.event === 'PALLET_ARRIVED') {
             setSensorTriggered(true);
             setTimeout(() => setSensorTriggered(false), 2000);
+            addLog('SENSOR', 'Dock 3 pallet arrival detected');
           }
+        }
+        else if (topic === 'warehouse/orders/completed') {
+          if (payload.correlation_id) setCurrentCorrelationId(payload.correlation_id);
+          addLog('COMPLETION', `Order ${payload.order_number || 'unknown order'} completed by ${payload.robot_id || 'robot'}${payload.correlation_id ? ` [${payload.correlation_id}]` : ''}`);
         }
       } catch (err) {
         console.error('Failed to parse MQTT message', err);
@@ -61,41 +130,37 @@ function App() {
     setDispatchMsg(null);
 
     // First Principle: The UI generates a simple ID, but the ERP validates it.
-    const orderNumber = `ORD-${Date.now()}`;
+    const productionOrderNumber = `ORD-${Date.now()}`;
+    const displayOrderNumber = `ORD-${nextSequence.current++}`;
 
     try {
       const response = await fetch(ERP_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          order_number: orderNumber,
+          order_number: productionOrderNumber,
           customer: customer,
           destination_dock: dock,
           items: [{ product_sku: sku, requested_qty: parseInt(quantity) }]
         })
       });
 
-      if (!response.ok) throw new Error('ERP rejected the order');
+      const responsePayload = await response.json().catch(() => ({}));
 
-      setDispatchMsg({ type: 'success', text: `Order ${orderNumber} dispatched!` });
+      if (!response.ok) throw new Error(responsePayload.detail || 'ERP rejected the order');
+
+      if (responsePayload.correlation_id) setCurrentCorrelationId(responsePayload.correlation_id);
+      setCurrentOrder(responsePayload.order_number || productionOrderNumber);
+      setDispatchMsg({ type: 'success', text: `Order ${displayOrderNumber} dispatched${responsePayload.correlation_id ? ` [${responsePayload.correlation_id}]` : ''}!` });
       // Reset form
       setCustomer('');
       setQuantity(1);
-    } catch (err) {
+    } catch {
       setDispatchMsg({ type: 'error', text: 'Failed to dispatch. Check ERP API.' });
     } finally {
       setIsDispatching(false);
       setTimeout(() => setDispatchMsg(null), 4000);
     }
-  };
-
-  const addLog = (source, msg) => {
-    const newLog = {
-      time: new Date().toLocaleTimeString(),
-      source,
-      msg: typeof msg === 'object' ? JSON.stringify(msg) : msg
-    };
-    setLiveLogs(prev => [...prev, newLog].slice(-100));
   };
 
   const styles = {
@@ -176,15 +241,44 @@ function App() {
 
         {/* Robot State Card */}
         <div style={styles.card}>
-          <h3>🤖 AMR-01 (Robot)</h3>
+          <h3>🤖 AMR-Ultra (Robot)</h3>
           <p>State: <span style={robotState === 'IDLE' ? styles.statusGreen : styles.statusYellow}>{robotState}</span></p>
           <p>Current Order: {currentOrder || 'None'}</p>
+          <p>Correlation ID: {currentCorrelationId || 'None'}</p>
         </div>
 
         {/* Conveyor State Card */}
         <div style={styles.card}>
           <h3>⚙️ Conveyor-1 (PLC)</h3>
           <p>Dock 3 Sensor: <span style={sensorTriggered ? styles.statusGreen : styles.statusRed}>{sensorTriggered ? 'TRIGGERED (Pallet Here)' : 'CLEAR'}</span></p>
+        </div>
+
+        <div style={{...styles.card, borderColor: '#3b82f6', gridColumn: '1 / -1', justifySelf: 'center', width: 'min(100%, 700px)', boxSizing: 'border-box'}}>
+          <h3>🛠️ Commissioning Mode (Site Validation)</h3>
+          <button onClick={runDiagnostics}
+                  style={{...styles.button, backgroundColor: '#2563eb'}}
+                  disabled={isChecking}>
+            {isChecking ? 'RUNNING DIAGNOSTICS...' : 'RUN SITE VALIDATION'}
+          </button>
+          {healthStatus && (
+            <ul style={{listStyle: 'none', padding: 0, marginTop: '15px'}}>
+              {Object.entries(healthStatus).map(([key, value]) => (
+                <li key={key}>
+                    <span>{key.replace(/_/g, ' ')}:</span>
+                    <span style={{
+                      color: key === 'timestamp'
+                        ? '#aaa'
+                        : value === 'OK' ? '#4caf50' : '#f44336',
+                      fontWeight: 'bold'
+                    }}>
+                      {key === 'timestamp'
+                        ? value
+                        : value === 'OK' ? '✅ ONLINE' : `❌ ${value}`}
+                    </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 

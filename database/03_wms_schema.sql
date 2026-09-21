@@ -37,6 +37,7 @@ CREATE TABLE wms.equipment_parameters (
 CREATE TABLE wms.tasks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     order_number VARCHAR(100) NOT NULL,
+    correlation_id VARCHAR(100),
     task_type VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
     payload JSONB,

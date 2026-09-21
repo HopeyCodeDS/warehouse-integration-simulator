@@ -17,11 +17,28 @@ app = FastAPI(
 # First Principle: We explicitly trust the React frontend to send commands.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], 
+    allow_origins=[
+        "http://localhost:5173", "http://127.0.0.1:5173",
+        "http://localhost:5174", "http://127.0.0.1:5174",
+        "http://localhost:5175", "http://127.0.0.1:5175",
+        "http://localhost:5176", "http://127.0.0.1:5176",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def serialize_order(order: models.Order):
+    return {
+        "id": order.id,
+        "order_number": order.order_number,
+        "correlation_id": order.correlation_id,
+        "customer": order.customer,
+        "destination_dock": order.destination_dock,
+        "status": order.status,
+        "created_at": order.created_at,
+    }
 
 class OrderStatusUpdate(BaseModel):
     status: str
@@ -40,6 +57,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     # 2. Create the Order
     new_order = models.Order(
         order_number=order.order_number,
+        correlation_id=correlation_id,
         customer=order.customer,
         destination_dock=order.destination_dock,
         status="PENDING"
@@ -72,6 +90,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
         source="ERP",
         destination="Integration_Engine",
         event_type="ORDER_CREATED",
+        correlation_id=correlation_id,
         payload=event_payload,
         status="PENDING"
     )
@@ -81,14 +100,14 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_order)
     
-    return new_order
+    return serialize_order(new_order)
 
 @app.get("/api/orders/{order_number}", response_model=schemas.OrderResponse, tags=["Orders"])
 def get_order(order_number: str, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.order_number == order_number).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    return order
+    return serialize_order(order)
 
 @app.patch("/api/orders/{order_number}/status", tags=["Orders"])
 def update_order_status(order_number: str, body: OrderStatusUpdate, db: Session = Depends(get_db)):

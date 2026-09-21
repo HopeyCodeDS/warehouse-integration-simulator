@@ -18,6 +18,7 @@ class Order(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     order_number = Column(String, unique=True, nullable=False)
+    correlation_id = Column(String, unique=True, nullable=False, index=True)
     customer = Column(String, nullable=False)
     destination_dock = Column(String, nullable=False)
     status = Column(String, default="PENDING")
@@ -41,6 +42,7 @@ class IntegrationEvent(Base):
     source = Column(String, nullable=False)
     destination = Column(String, nullable=False)
     event_type = Column(String, nullable=False)
+    correlation_id = Column(String, index=True)
     payload = Column(String) # Storing JSON as string for simplicity
     status = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

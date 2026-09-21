@@ -10,6 +10,7 @@ CREATE TABLE erp.products (
 CREATE TABLE erp.orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     order_number VARCHAR(100) UNIQUE NOT NULL,
+    correlation_id VARCHAR(100) UNIQUE NOT NULL,
     customer VARCHAR(255) NOT NULL,
     destination_dock VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'PENDING',

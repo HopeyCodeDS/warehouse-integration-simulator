@@ -65,6 +65,33 @@ services:
     networks:
       - wis-network
     restart: unless-stopped
+
+  traffic-manager:
+    build: ./services/traffic-manager
+    container_name: wis-traffic-manager
+    environment:
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
+
+  simulation-control:
+    build: ./services/simulation-control
+    container_name: wis-simulation-control
+    environment:
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - SIMULATION_RUN_ID=local-run
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
   
   mqtt-broker:
     image: eclipse-mosquitto:2
@@ -84,10 +111,62 @@ services:
     env_file:
       - .env
     environment:
-      - ROBOT_ID=AMR-01
+      - ROBOT_ID=AMR-Ultra
+      - FLEET_IDS=AMR-Ultra,AMR-Nova,AMR-Orbit,AMR-Vega
       - MQTT_BROKER_HOST=mqtt-broker
       - MQTT_BROKER_PORT=1883
       - PYTHONUNBUFFERED=1 
+    depends_on:
+      - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
+
+  robot-simulator-02:
+    build: ./services/robot-simulator
+    container_name: wis-robot-simulator-02
+    env_file:
+      - .env
+    environment:
+      - ROBOT_ID=AMR-Nova
+      - FLEET_IDS=AMR-Ultra,AMR-Nova,AMR-Orbit,AMR-Vega
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
+
+  robot-simulator-03:
+    build: ./services/robot-simulator
+    container_name: wis-robot-simulator-03
+    env_file:
+      - .env
+    environment:
+      - ROBOT_ID=AMR-Orbit
+      - FLEET_IDS=AMR-Ultra,AMR-Nova,AMR-Orbit,AMR-Vega
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
+
+  robot-simulator-04:
+    build: ./services/robot-simulator
+    container_name: wis-robot-simulator-04
+    env_file:
+      - .env
+    environment:
+      - ROBOT_ID=AMR-Vega
+      - FLEET_IDS=AMR-Ultra,AMR-Nova,AMR-Orbit,AMR-Vega
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+      - PYTHONUNBUFFERED=1
     depends_on:
       - mqtt-broker
     networks:
@@ -115,6 +194,21 @@ services:
     depends_on:
       - opcua-plc-simulator
       - mqtt-broker
+    networks:
+      - wis-network
+    restart: unless-stopped
+  
+  commissioning-api:
+    build: ./services/commissioning-api
+    container_name: wis-commissioning
+    ports:
+      - "8002:8002"
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - postgres
+      - mqtt-broker
+      - opcua-plc-simulator
     networks:
       - wis-network
     restart: unless-stopped
