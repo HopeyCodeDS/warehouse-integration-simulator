@@ -247,7 +247,16 @@ This project expects the following on the local machine:
 - Node.js and npm for the frontend dashboard
 - Python for the service code and local development if needed
 
-## Quick start
+## Technical Guide
+
+The project is designed to run locally with Docker for the backend stack and Vite for the frontends. A typical run sequence is:
+
+1. Start the backend services with Docker Compose.
+2. Start the operator dashboard or the realistic HMI in a separate terminal.
+3. Use the ERP API or the dashboard to create an order.
+4. Watch the MQTT flow, robot simulator, and completion callback update the system.
+
+### 1. Start the backend stack
 
 From the project root:
 
@@ -255,7 +264,7 @@ From the project root:
 docker compose up -d --build
 ```
 
-Then, for the operator dashboard:
+### 2. Start the operator dashboard
 
 ```bash
 cd frontend/react-dashboard
@@ -265,13 +274,15 @@ npm run dev
 
 The dashboard is typically served on a local Vite port, such as `http://localhost:5173` depending on your local configuration.
 
-For the realistic HMI view:
+### 3. Start the realistic HMI
 
 ```bash
 cd frontend/realistic-wis-hmi
 npm install
 npm run dev
 ```
+
+### 4. Run the end-to-end test flow
 
 To run the end-to-end order-flow tests, start the Docker stack first and run:
 
@@ -280,6 +291,14 @@ make e2e
 ```
 
 The test creates a uniquely named ERP order and waits for it to reach `COMPLETED`. This exercises the ERP API, transactional outbox, integration engine, WMS allocation, MQTT task dispatch, robot simulator, WMS completion handler, and ERP status callback. The default timeout is 90 seconds and can be changed with `E2E_TIMEOUT_SECONDS`.
+
+### 5. Stop the stack
+
+When you are done, stop the containers with:
+
+```bash
+docker compose down
+```
 
 ## Environment configuration
 
