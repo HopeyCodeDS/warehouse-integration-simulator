@@ -4,8 +4,6 @@ _A local warehouse integration simulator for ERP, WMS, MQTT, PLC, robot, and HMI
 
 [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml) [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](services/erp-api/) [![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)](frontend/react-dashboard/) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)](database/) [![MQTT](https://img.shields.io/badge/MQTT-660066?style=flat-square&logo=mqtt&logoColor=white)](services/mqtt-broker/)
 
-![HMI dashboard screenshot](assets/initial-hmi-dashboard.png)
-
 This project is a local simulation of a warehouse integration architecture connecting an ERP, a WMS, a message broker, warehouse automation services, and operator-facing user interfaces. It is intended to model the movement of orders from business systems into physical execution flows, including queueing, task dispatch, and completion feedback. The longer-term aim is to use the simulator as a foundation for agentic AI workflows that can optimize intralogistics decisions, orchestration, and operational coordination.
 
 The repository is organized as a small multi-service Docker application. The code is focused on demonstrating integration patterns rather than production deployment readiness.
@@ -35,6 +33,8 @@ Use the [documentation index](docs/README.md) for architecture notes, implementa
 The repository includes current visual assets that can be used in the README or linked from release notes.
 
 ### HMI Dashboard Screenshot
+
+_Initial demo version of the operator view._
 
 This is the top-level operator view: a compact command surface for dispatch, live MQTT status, robot state, and commissioning checks.
 
