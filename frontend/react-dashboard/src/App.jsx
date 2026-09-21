@@ -26,6 +26,7 @@ function App() {
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchMsg, setDispatchMsg] = useState(null);
   const nextSequence = useRef(1042);
+  const lastRobotLogRef = useRef({ robotId: null, state: null, waypointIndex: null, orderNumber: null });
 
   const addLog = (source, msg) => {
     const newLog = {
@@ -54,6 +55,7 @@ function App() {
       'warehouse/robot/state',
       'warehouse/tasks/new',
       'warehouse/events/sensor',
+      'warehouse/orders/completed',
     ];
 
     client.on('connect', () => {
@@ -65,20 +67,49 @@ function App() {
     client.on('message', (topic, message) => {
       try {
         const payload = JSON.parse(message.toString());
-        addLog(topic, payload);
 
         if (topic === 'warehouse/robot/state') {
           setRobotState(payload.state);
           if (payload.order_number) setCurrentOrder(payload.order_number);
+
+          const lastRobotLog = lastRobotLogRef.current;
+          const robotId = payload.robot_id || 'robot';
+          const waypointIndex = typeof payload.waypoint_index === 'number' ? payload.waypoint_index : null;
+
+          if (lastRobotLog.robotId !== robotId || lastRobotLog.state !== payload.state) {
+            addLog('ROBOT', `${robotId} state -> ${payload.state}`);
+          }
+
+          if (payload.state === 'MOVING' && waypointIndex !== null && waypointIndex !== lastRobotLog.waypointIndex) {
+            const routeLength = Array.isArray(payload.route) ? payload.route.length : null;
+            const waypointText = routeLength ? `${waypointIndex + 1}/${routeLength}` : `${waypointIndex + 1}`;
+            addLog('ROBOT', `${robotId} moved to waypoint ${waypointText}`);
+          }
+
+          if (payload.state === 'DOCKED' && lastRobotLog.state !== 'DOCKED') {
+            addLog('ROBOT', `${robotId} docked for order ${payload.order_number || 'unknown order'}`);
+          }
+
+          lastRobotLogRef.current = {
+            robotId,
+            state: payload.state,
+            waypointIndex,
+            orderNumber: payload.order_number || null,
+          };
         } 
         else if (topic === 'warehouse/tasks/new') {
           setCurrentOrder(payload.order_number);
+          addLog('WMS', `Task dispatched for ${payload.order_number || 'unknown order'} to ${payload.payload?.destination_dock || 'destination dock'}`);
         }
         else if (topic === 'warehouse/events/sensor') {
           if (payload.event === 'PALLET_ARRIVED') {
             setSensorTriggered(true);
             setTimeout(() => setSensorTriggered(false), 2000);
+            addLog('SENSOR', 'Dock 3 pallet arrival detected');
           }
+        }
+        else if (topic === 'warehouse/orders/completed') {
+          addLog('COMPLETION', `Order ${payload.order_number || 'unknown order'} completed by ${payload.robot_id || 'robot'}`);
         }
       } catch (err) {
         console.error('Failed to parse MQTT message', err);
