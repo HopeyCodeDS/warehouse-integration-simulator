@@ -13,6 +13,7 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [robotState, setRobotState] = useState('OFFLINE');
   const [currentOrder, setCurrentOrder] = useState(null);
+  const [currentCorrelationId, setCurrentCorrelationId] = useState(null);
   const [sensorTriggered, setSensorTriggered] = useState(false);
   const [liveLogs, setLiveLogs] = useState([]);
   const [isChecking, setIsChecking] = useState(false);
@@ -71,6 +72,7 @@ function App() {
         if (topic === 'warehouse/robot/state') {
           setRobotState(payload.state);
           if (payload.order_number) setCurrentOrder(payload.order_number);
+          if (payload.correlation_id) setCurrentCorrelationId(payload.correlation_id);
 
           const lastRobotLog = lastRobotLogRef.current;
           const robotId = payload.robot_id || 'robot';
@@ -99,7 +101,8 @@ function App() {
         } 
         else if (topic === 'warehouse/tasks/new') {
           setCurrentOrder(payload.order_number);
-          addLog('WMS', `Task dispatched for ${payload.order_number || 'unknown order'} to ${payload.payload?.destination_dock || 'destination dock'}`);
+          if (payload.correlation_id) setCurrentCorrelationId(payload.correlation_id);
+          addLog('WMS', `Task dispatched for ${payload.order_number || 'unknown order'} to ${payload.payload?.destination_dock || 'destination dock'}${payload.correlation_id ? ` [${payload.correlation_id}]` : ''}`);
         }
         else if (topic === 'warehouse/events/sensor') {
           if (payload.event === 'PALLET_ARRIVED') {
@@ -109,7 +112,8 @@ function App() {
           }
         }
         else if (topic === 'warehouse/orders/completed') {
-          addLog('COMPLETION', `Order ${payload.order_number || 'unknown order'} completed by ${payload.robot_id || 'robot'}`);
+          if (payload.correlation_id) setCurrentCorrelationId(payload.correlation_id);
+          addLog('COMPLETION', `Order ${payload.order_number || 'unknown order'} completed by ${payload.robot_id || 'robot'}${payload.correlation_id ? ` [${payload.correlation_id}]` : ''}`);
         }
       } catch (err) {
         console.error('Failed to parse MQTT message', err);
@@ -141,9 +145,13 @@ function App() {
         })
       });
 
-      if (!response.ok) throw new Error('ERP rejected the order');
+      const responsePayload = await response.json().catch(() => ({}));
 
-      setDispatchMsg({ type: 'success', text: `Order ${displayOrderNumber} dispatched!` });
+      if (!response.ok) throw new Error(responsePayload.detail || 'ERP rejected the order');
+
+      if (responsePayload.correlation_id) setCurrentCorrelationId(responsePayload.correlation_id);
+      setCurrentOrder(responsePayload.order_number || productionOrderNumber);
+      setDispatchMsg({ type: 'success', text: `Order ${displayOrderNumber} dispatched${responsePayload.correlation_id ? ` [${responsePayload.correlation_id}]` : ''}!` });
       // Reset form
       setCustomer('');
       setQuantity(1);
@@ -236,6 +244,7 @@ function App() {
           <h3>🤖 AMR-Ultra (Robot)</h3>
           <p>State: <span style={robotState === 'IDLE' ? styles.statusGreen : styles.statusYellow}>{robotState}</span></p>
           <p>Current Order: {currentOrder || 'None'}</p>
+          <p>Correlation ID: {currentCorrelationId || 'None'}</p>
         </div>
 
         {/* Conveyor State Card */}

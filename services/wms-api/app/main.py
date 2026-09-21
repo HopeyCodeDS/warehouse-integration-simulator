@@ -69,7 +69,7 @@ def on_complete(client, userdata, msg):
         print(f"[WMS] ✅ Task COMPLETED. Inventory decremented for {task.order_number}")
         mqtt_client.publish("warehouse/orders/completed", json.dumps({
             "order_number": task.order_number,
-            "correlation_id": data.get("correlation_id"),
+            "correlation_id": task.correlation_id or data.get("correlation_id"),
         }), qos=1)
     except Exception as e:
         db.rollback()
@@ -109,6 +109,7 @@ def receive_task(task_data: TaskCreate, db: Session = Depends(get_db)):
     # 1. Save to WMS database
     new_task = Task(
         order_number=task_data.order_number,
+        correlation_id=task_data.correlation_id,
         task_type=task_data.task_type,
         status="ALLOCATED",
         payload={**task_data.payload,

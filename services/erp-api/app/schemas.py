@@ -16,6 +16,7 @@ class OrderCreate(BaseModel):
 class OrderResponse(BaseModel):
     id: uuid.UUID
     order_number: str
+    correlation_id: str
     customer: str
     destination_dock: str
     status: str

@@ -10,6 +10,7 @@ class Task(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     order_number = Column(String, nullable=False)
+    correlation_id = Column(String)
     task_type = Column(String, nullable=False)
     status = Column(String, default="PENDING")
     payload = Column(JSONB)

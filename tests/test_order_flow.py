@@ -38,6 +38,7 @@ class OrderFlowE2ETests(unittest.TestCase):
 
         self.assertEqual(status_code, 201)
         self.assertEqual(created_order["order_number"], order_number)
+        self.assertIn("correlation_id", created_order)
         self.assertEqual(created_order["status"], "PENDING")
 
         deadline = time.monotonic() + FLOW_TIMEOUT_SECONDS
@@ -45,6 +46,7 @@ class OrderFlowE2ETests(unittest.TestCase):
         while time.monotonic() < deadline:
             _, order = request_json("GET", f"/api/orders/{order_number}")
             observed_statuses.append(order["status"])
+            self.assertEqual(order["correlation_id"], created_order["correlation_id"])
             if order["status"] == "COMPLETED":
                 return
             time.sleep(POLL_INTERVAL_SECONDS)

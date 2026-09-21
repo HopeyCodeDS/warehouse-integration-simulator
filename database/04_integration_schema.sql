@@ -4,6 +4,7 @@ CREATE TABLE integration.integration_events (
     source VARCHAR(50) NOT NULL,
     destination VARCHAR(50) NOT NULL,
     event_type VARCHAR(100) NOT NULL,
+    correlation_id VARCHAR(100),
     payload JSONB,
     status VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
