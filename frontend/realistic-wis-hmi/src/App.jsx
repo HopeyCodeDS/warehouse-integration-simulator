@@ -6,6 +6,7 @@ import { WarehouseScene as DetailedWarehouseScene } from './WarehouseScene';
 
 const navItems = [['Operations', LayoutGrid], ['Orders', ClipboardList], ['Fleet health', Truck], ['Event stream', Radio], ['Analytics', Gauge]];
 const statusColor = { FREE: '#708391', RESERVED: '#53a9ff', LOADING: '#20d3b2', FAULT: '#ff6879' };
+const cargoColors = ['#b9854c', '#c99a5e', '#8b6f4d', '#d0aa68'];
 
 function Sidebar({ open, onClose }) {
   return <aside className={`sidebar ${open ? 'open' : ''}`}>
@@ -31,11 +32,34 @@ function Kpis({ robots, orders, connected }) {
 }
 
 function Floor2D({ robots, selected, setSelected, sensorActive, equipment }) {
-  const footprint = (x, z, width, depth) => ({ left: `${((x - width / 2 + warehouse.width / 2) / warehouse.width) * 100}%`, top: `${((z - depth / 2 + warehouse.depth / 2) / warehouse.depth) * 100}%`, width: `${(width / warehouse.width) * 100}%`, height: `${(depth / warehouse.depth) * 100}%` });
+  const footprint = (x, z, width, depth) => ({
+    left: `${((x - width / 2 + warehouse.width / 2) / warehouse.width) * 100}%`,
+    top: `${((z - depth / 2 + warehouse.depth / 2) / warehouse.depth) * 100}%`,
+    width: `${(width / warehouse.width) * 100}%`,
+    height: `${(depth / warehouse.depth) * 100}%`,
+  });
   const point = (x, z) => ({ left: `${((x + warehouse.width / 2) / warehouse.width) * 100}%`, top: `${((z + warehouse.depth / 2) / warehouse.depth) * 100}%` });
   const activeRobot = robots.find((robot) => robot.id === selected) || robots.find((robot) => robot.state === 'MOVING');
   const routePoints = activeRobot?.route?.map((routePoint) => `${routePoint.x + warehouse.width / 2},${routePoint.z + warehouse.depth / 2}`).join(' ');
-    return <div className="floor-2d"><div className="floor-grid" /><div className="spatial-label spatial-support-label">SUPPORT</div><div className="spatial-support"><b>BREAK<br />ROOM</b><b>OFFICE</b><b>WAITING<br />AREA</b></div><div className="spatial-label spatial-storage-label">STORAGE / ASRS</div>{warehouse.racks.map((rack) => <button key={rack.id} className={`spatial-rack ${selected === `Rack-${rack.id}` ? 'selected' : ''}`} style={footprint(rack.x, rack.z, rack.w, rack.d)} onClick={() => setSelected(`Rack-${rack.id}`)}><span>{rack.id}</span><i><b style={{ width: `${rack.fill}%` }} /></i><small>{rack.fill}%</small></button>)}<div className="spatial-label spatial-flow-label">INTERNAL FLOW</div>{warehouse.conveyors.map((conveyor, index) => <div className={`spatial-conveyor ${equipment.Running ? 'running' : ''} ${equipment.Jam ? 'fault' : ''}`} style={footprint(conveyor.x, conveyor.z, conveyor.w, conveyor.d)} key={conveyor.id}><span>{conveyor.id.toUpperCase()} / {equipment.Jam ? 'JAM' : equipment.Running ? 'RUNNING' : 'STOPPED'}</span><i style={{ animationDelay: `${index * 0.3}s` }} /></div>)}<div className="spatial-pick"><PackageCheck size={15} /><span>PICK STATION 01</span><b>READY / 4 PALLETS</b></div><div className="spatial-label spatial-docks-label">RECEIVING / SHIPPING</div>{warehouse.docks.map((dock) => <button key={dock.id} className="spatial-dock" style={footprint(dock.x, dock.z, 2.4, 2.7)} onClick={() => setSelected(dock.id)}><span>{dock.id.replace('-', ' ')}</span><b style={{ color: statusColor[dock.state] }}>{dock.state}</b></button>)}{routePoints && <svg className="telemetry-route" viewBox={`0 0 ${warehouse.width} ${warehouse.depth}`} preserveAspectRatio="none"><polyline points={routePoints} /></svg>}<div className="route route-a" /><div className="route route-b" />{sensorActive && <div className="sensor-pulse" />}{robots.map((robot) => <button key={robot.id} className={`robot-2d ${selected === robot.id ? 'selected' : ''}`} style={{ ...point(robot.x, robot.z), '--robot-color': robot.color }} onClick={() => setSelected(robot.id)}><span className="robot-body"><i /><i /></span><strong>{robot.id}</strong><small>{robot.state}</small></button>)}<div className="north-marker">N <ChevronRight size={12} /></div></div>;
+
+  return <div className="floor-2d">
+    <div className="floor-grid" />
+    <div className="spatial-label spatial-support-label">SUPPORT</div>
+    <div className="spatial-support"><b>BREAK<br />ROOM</b><b>OFFICE</b><b>WAITING<br />AREA</b></div>
+    <div className="spatial-label spatial-storage-label">STORAGE / ASRS</div>
+    {warehouse.racks.map((rack) => <button key={rack.id} className={`spatial-rack ${selected === `Rack-${rack.id}` ? 'selected' : ''}`} style={footprint(rack.x, rack.z, rack.w, rack.d)} onClick={() => setSelected(`Rack-${rack.id}`)}><span>{rack.id}</span><i><b style={{ width: `${rack.fill}%` }} /></i><small>{rack.fill}%</small></button>)}
+    <div className="spatial-label spatial-flow-label">INTERNAL FLOW</div>
+    {warehouse.conveyors.map((conveyor, index) => <div className={`spatial-conveyor ${equipment.Running ? 'running' : ''} ${equipment.Jam ? 'fault' : ''}`} style={footprint(conveyor.x, conveyor.z, conveyor.w, conveyor.d)} key={conveyor.id}><span>{conveyor.id.toUpperCase()} / {equipment.Jam ? 'JAM' : equipment.Running ? 'RUNNING' : 'STOPPED'}</span><div className="spatial-cargo spatial-cargo-conveyor">{Array.from({ length: conveyor.id === 'Outbound' ? 3 : 2 }, (_, boxIndex) => <i key={`${conveyor.id}-${boxIndex}`} style={{ background: cargoColors[(boxIndex + index) % cargoColors.length] }} />)}</div><i style={{ animationDelay: `${index * 0.3}s` }} /></div>)}
+    {warehouse.pickStations.map((station) => <div className="spatial-pick" style={footprint(station.x, station.z, station.w, station.d)} key={station.id}><PackageCheck size={15} /><span>{station.id}</span><b>{station.ready}</b><div className="spatial-cargo spatial-cargo-station">{Array.from({ length: station.boxes }, (_, boxIndex) => <i key={`${station.id}-${boxIndex}`} style={{ background: cargoColors[(boxIndex + 1) % cargoColors.length] }} />)}</div></div>)}
+    <div className="spatial-label spatial-docks-label">RECEIVING / SHIPPING</div>
+    {warehouse.docks.map((dock) => <button key={dock.id} className="spatial-dock" style={footprint(dock.x, dock.z, 2.4, 2.7)} onClick={() => setSelected(dock.id)}><span>{dock.id.replace('-', ' ')}</span><b style={{ color: statusColor[dock.state] }}>{dock.state}</b></button>)}
+    {routePoints && <svg className="telemetry-route" viewBox={`0 0 ${warehouse.width} ${warehouse.depth}`} preserveAspectRatio="none"><polyline points={routePoints} /></svg>}
+    <div className="route route-a" />
+    <div className="route route-b" />
+    {sensorActive && <div className="sensor-pulse" />}
+    {robots.map((robot) => <button key={robot.id} className={`robot-2d ${selected === robot.id ? 'selected' : ''}`} style={{ ...point(robot.x, robot.z), '--robot-color': robot.color }} onClick={() => setSelected(robot.id)}><span className="robot-body"><i /><i /></span><strong>{robot.id}</strong><small>{robot.state}</small></button>)}
+    <div className="north-marker">N <ChevronRight size={12} /></div>
+  </div>;
 }
 
 

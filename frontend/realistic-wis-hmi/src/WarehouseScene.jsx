@@ -43,14 +43,29 @@ function Conveyor({ belt, equipment }) {
   const jammed = Boolean(equipment.Jam);
   const beltColor = jammed ? '#7f3340' : running ? '#2c7b72' : '#1b3a4a';
   const rollers = Array.from({ length: 12 }, (_, index) => -belt.w / 2 + 0.3 + index * ((belt.w - 0.6) / 11));
+  const cargo = Array.from({ length: belt.id === 'Outbound' ? 3 : 2 }, (_, index) => -belt.w / 4 + index * (belt.w / 4));
   return <group position={[belt.x, 0, belt.z]}>
     <Box position={[0, 0.26, 0]} args={[belt.w, 0.35, belt.d]} color={beltColor} metalness={0.7} roughness={0.36} />
     {rollers.map((x) => <mesh key={x} position={[x, 0.49, 0]} rotation={[0, 0, Math.PI / 2]}>
       <cylinderGeometry args={[0.16, 0.16, belt.d - 0.08, 16]} />
       <meshStandardMaterial color={running ? '#c2e2dc' : '#93a7aa'} metalness={0.85} roughness={0.24} />
     </mesh>)}
+    {cargo.map((x, index) => <Box key={`${belt.id}-${index}`} position={[x, 0.73, 0]} args={[0.48, 0.34, 0.42]} color={palletColors[(index + 1) % palletColors.length]} roughness={0.78} />)}
     <Box position={[0, 0.62, 0]} args={[belt.w - 0.18, 0.05, belt.d - 0.18]} color="#294f5e" metalness={0.2} roughness={0.48} />
     <Text position={[0, 0.72, -0.7]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.16} color={jammed ? '#ff6879' : running ? '#72f3d9' : '#b4cdd0'} anchorX="center" anchorY="middle">{belt.id.toUpperCase()} / {jammed ? 'JAM' : running ? 'RUNNING' : 'STOPPED'}</Text>
+  </group>;
+}
+
+function PickStation({ station }) {
+  return <group position={[station.x, 0, station.z]}>
+    <Box position={[0, 0.04, 0]} args={[station.w, 0.08, station.d]} color="#122736" roughness={0.9} />
+    <Box position={[0, 0.25, 0]} args={[station.w - 0.45, 0.42, station.d - 0.25]} color="#143242" metalness={0.18} roughness={0.62} />
+    {Array.from({ length: station.boxes }, (_, index) => <Box key={`${station.id}-${index}`} position={[-0.9 + index * 0.78, 0.54 + (index % 2) * 0.02, -0.1 + (index % 2) * 0.12]} args={[0.52, 0.34, 0.44]} color={palletColors[(index + 2) % palletColors.length]} roughness={0.8} />)}
+    <Box position={[0, 0.7, -station.d / 2 + 0.06]} args={[station.w - 0.75, 0.08, 0.06]} color="#20d3b2" emissive="#20d3b2" intensity={0.5} />
+    <Box position={[-station.w / 2 + 0.3, 0.46, 0]} args={[0.12, 0.28, station.d - 0.38]} color="#2f5464" roughness={0.8} />
+    <Box position={[station.w / 2 - 0.3, 0.46, 0]} args={[0.12, 0.28, station.d - 0.38]} color="#2f5464" roughness={0.8} />
+    <Text position={[0, 1.18, 0]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.18} color="#dffcf6" anchorX="center" anchorY="middle">{station.id}</Text>
+    <Text position={[0, 0.96, 0.35]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.1} color="#7cebd7" anchorX="center" anchorY="middle">{station.ready}</Text>
   </group>;
 }
 
@@ -109,6 +124,7 @@ export function WarehouseScene({ robots, selected, setSelected, equipment = {} }
     <AisleMarkings />
     {robots.filter((robot) => robot.route?.length > 1).map((robot) => <Line key={`route-${robot.id}`} points={robot.route.map((routePoint) => [routePoint.x, 0.035, routePoint.z])} color={robot.color} lineWidth={1.4} dashed dashSize={0.35} gapSize={0.22} />)}
     {warehouse.racks.map((rack) => <ShelfRack key={rack.id} rack={rack} selected={selected === `Rack-${rack.id}`} onSelect={setSelected} />)}
+    {warehouse.pickStations?.map((station) => <PickStation key={station.id} station={station} />)}
     {warehouse.docks.map((dock) => <DockStation key={dock.id} dock={dock} selected={selected === dock.id} onSelect={setSelected} />)}
     {warehouse.conveyors.map((belt) => <Conveyor key={belt.id} belt={belt} equipment={equipment} />)}
     {robots.map((robot) => <AMR key={robot.id} robot={robot} selected={selected === robot.id} onSelect={setSelected} />)}

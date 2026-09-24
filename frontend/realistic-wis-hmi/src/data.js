@@ -19,14 +19,18 @@ export const warehouse = {
     { id: 'Dock-4', x: 11.8, z: 5, state: 'FAULT' },
   ],
   conveyors: [
-    { id: 'Inbound', x: 5.6, z: -5.2, w: 7, d: 1.1 },
-    { id: 'Sort', x: 5.6, z: 0, w: 7, d: 1.1 },
-    { id: 'Outbound', x: 5.6, z: 5.2, w: 7, d: 1.1 },
+    { id: 'Inbound', x: 6.5, z: -4.2, w: 5.2, d: 0.85 },
+    { id: 'Sort', x: 6.5, z: 0, w: 5.2, d: 0.85 },
+    { id: 'Outbound', x: 6.5, z: 4.6, w: 5.2, d: 0.85 },
+  ],
+  pickStations: [
+    { id: 'Pick Station 01', x: 8.4, z: 7.6, w: 4.4, d: 1.8, ready: 'READY / 4 PALLETS', boxes: 3 },
+    { id: 'Pick Station 02', x: 8.4, z: -7.6, w: 4.4, d: 1.8, ready: 'READY / 2 PALLETS', boxes: 2 },
   ],
   robots: [
-    { id: 'AMR-Ultra', x: 2.5, z: 3.3, state: 'MOVING', battery: 87, color: '#21d3b2', task: 'Pallet #204' },
+    { id: 'AMR-Ultra', x: 4.8, z: 1.8, state: 'MOVING', battery: 87, color: '#21d3b2', task: 'Pallet #204' },
     { id: 'AMR-Nova', x: 3.7, z: -0.2, state: 'IDLE', battery: 92, color: '#55aaff', task: 'Standby' },
-    { id: 'AMR-Orbit', x: -3.5, z: 7, state: 'IDLE', battery: 76, color: '#b48cff', task: 'Standby' },
+    { id: 'AMR-Orbit', x: -12.4, z: 9.9, state: 'IDLE', battery: 76, color: '#b48cff', task: 'Standby' },
     { id: 'AMR-Vega', x: 9, z: 4.2, state: 'DOCKED', battery: 64, color: '#ffbf62', task: 'Pallet #198' },
   ],
 };

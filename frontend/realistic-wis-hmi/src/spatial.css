@@ -15,9 +15,14 @@
 .spatial-conveyor span{position:absolute;inset:0;display:grid;place-items:center;color:#c3d7da;font:8px 'DM Mono',monospace;z-index:1}
 .spatial-conveyor i{position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 10px,#6d8c97 11px 13px,transparent 14px 23px);animation:belt 1.3s linear infinite;opacity:.55}
 .spatial-conveyor:not(.running) i{animation-play-state:paused;opacity:.25}.spatial-conveyor.fault{border-color:var(--coral);background:#3b202c}.spatial-conveyor.running{border-color:var(--teal)}
-.spatial-pick{position:absolute;z-index:1;left:44%;top:65%;width:25%;height:12%;border:1px solid #3f6575;background:#112b3c;display:grid;grid-template-columns:22px auto;align-content:center;padding-left:10px;column-gap:6px;color:var(--teal);font:8px 'DM Mono',monospace}
-.spatial-pick svg{grid-row:span 2}
-.spatial-pick b{color:#7c9ba1;font-weight:400;margin-top:3px}
+.spatial-cargo{position:absolute;inset:auto;display:flex;gap:4px;pointer-events:none;z-index:1}
+.spatial-cargo-conveyor{right:11px;top:6px}
+.spatial-cargo-conveyor i,.spatial-cargo-station i{width:14px;height:10px;border:1px solid rgba(20,40,45,.35);box-shadow:0 2px 4px rgba(0,0,0,.2);position:relative}
+.spatial-cargo-station{right:10px;top:8px}
+.spatial-pick{position:absolute;z-index:2;border:1px solid #3f6575;background:linear-gradient(180deg,#112b3c 0%,#0e2230 100%);display:grid;grid-template-columns:22px 1fr;align-items:center;gap:6px;padding:0 10px;color:var(--teal);font:8px 'DM Mono',monospace;box-shadow:0 0 0 1px rgba(32,211,178,.08),0 8px 18px rgba(0,0,0,.18)}
+.spatial-pick svg{grid-row:span 2;color:var(--teal)}
+.spatial-pick span{font:10px 'DM Mono',monospace;color:#e2f3f1;letter-spacing:.08em}
+.spatial-pick b{color:#7cebd7;font-weight:400}
 .spatial-dock{position:absolute;z-index:2;border:1px solid #365669;background:#132c3c;text-align:left;padding:5px 7px;display:grid;gap:2px}
 .spatial-dock:hover{border-color:var(--teal)}
 .spatial-dock span{font:9px 'DM Mono',monospace;color:#e2eef0}
