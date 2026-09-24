@@ -28,17 +28,18 @@ The project is designed to show how services communicate across bounded contexts
 
 Use the [documentation index](docs/README.md) for architecture notes, implementation history, acceptance documents, ADRs, and reusable implementation-note templates. The [project engineering log](docs/PROJECT-LOG.md) is the append-only record of ongoing changes and validation results.
 
-## Demo Media
+## Demo Media (WIS)
 
 The repository includes current visual assets that can be used in the README or linked from release notes.
 
-### HMI Dashboard Screenshot
+### HMI Dashboard shot
 
-Initial demo version of the operator view.
+Demo version of the first operator view.
 
 This is the top-level operator view: a compact command surface for dispatch, live MQTT status, robot state, and commissioning checks.
 
 ![HMI dashboard screenshot](assets/initial-hmi-dashboard.png)
+![HMI former live integrator monitor shot](assets/initial-hmi-dashboard-3.png)
 
 ### Commissioning Mode Demo
 
@@ -46,17 +47,17 @@ Site-validation flow, with readiness checks, diagnostics, and the operational co
 
 [Open commissioning-mode-demo.mp4](assets/commissioning-mode-demo.mp4)
 
-### 2D Initial Demo
+### 2D Initial Demo (WIP)
 
 Live floor-map view showing robot movement, dock activity, and telemetry updates in real time.
 
-[Open 2D-initial-demo.mp4](assets/2D-initial-demo.mp4)
+[Open 2D-demo.mp4](assets/2D-demo.mp4)
 
-### 3D Initial Demo
+### 3D Initial Demo (WIP)
 
 Immersive twin view with spatial context and a more cinematic sense of scale.
 
-[Open 3D-initial-demo.mp4](assets/3D-initial-demo.mp4)
+[Open 3D-demo.mp4](assets/3D-demo.mp4)
 
 ## Architecture
 
@@ -158,8 +159,6 @@ The repository keeps two active user interfaces on `main`:
 
 - `frontend/react-dashboard` for operator monitoring, order dispatch, and live integration logs
 - `frontend/realistic-wis-hmi` for the richer warehouse floor visualization and telemetry view
-
-The earlier `frontend/digital-twin` and `frontend/wis-digital-Twin-v2` frontends are being retired/archived so the branch stays focused and easier to merge.
 
 ## Repository structure
 
