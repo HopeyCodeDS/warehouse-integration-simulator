@@ -1,8 +1,20 @@
-# Warehouse Integration Simulator
+<h1 align="center">Warehouse Integration Simulator</h1>
 
-_A local warehouse integration simulator for ERP, WMS, MQTT, PLC, robot, and HMI workflow testing._
+<div align="center">
 
-[![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml) [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](services/erp-api/) [![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)](frontend/react-dashboard/) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)](database/) [![MQTT](https://img.shields.io/badge/MQTT-660066?style=flat-square&logo=mqtt&logoColor=white)](services/mqtt-broker/)
+  [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](services/erp-api/)
+  [![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)](frontend/react-dashboard/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)](database/)
+  [![MQTT](https://img.shields.io/badge/MQTT-660066?style=flat-square&logo=mqtt&logoColor=white)](services/mqtt-broker/)
+
+</div>
+
+<div align="center">
+  
+  > _A local warehouse integration simulator for ERP, WMS, MQTT, PLC, robot, and HMI workflow testing._
+
+</div>
 
 This project is a local simulation of a warehouse integration architecture connecting an ERP, a WMS, a message broker, warehouse automation services, and operator-facing user interfaces. It is intended to model the movement of orders from business systems into physical execution flows, including queueing, task dispatch, and completion feedback. The longer-term aim is to use the simulator as a foundation for agentic AI workflows that can optimize intralogistics decisions, orchestration, and operational coordination.
 
@@ -28,36 +40,52 @@ The project is designed to show how services communicate across bounded contexts
 
 Use the [documentation index](docs/README.md) for architecture notes, implementation history, acceptance documents, ADRs, and reusable implementation-note templates. The [project engineering log](docs/PROJECT-LOG.md) is the append-only record of ongoing changes and validation results.
 
-## Demo Media (WIS)
+## Demo & Visual Tour (WIP)
 
-The repository includes current visual assets that can be used in the README or linked from release notes.
+### 1. Operations & Command Center
 
-### HMI Dashboard shot
-
-Demo version of the first operator view.
-
-This is the top-level operator view: a compact command surface for dispatch, live MQTT status, robot state, and commissioning checks.
+The main **Warehouse Integration Simulator (WIS)** dashboard serves as the central control panel for managing warehouse dispatch operations and hardware state monitoring.
 
 ![HMI dashboard screenshot](assets/initial-hmi-dashboard.png)
+
+* **Command Center:** Form controls to dispatch manual orders (selecting customer, destination dock, SKU, and quantity).
+* **Hardware State Telemetry:** Real-time status cards for active AMR units (e.g., *AMR-Ultra*) and PLC controllers (e.g., *Conveyor-1* / Dock sensors).
+* **Commissioning Mode:** One-click automated site validation test execution.
+
+---
+
+### 2. MQTT Event Bus Telemetry Monitor
+Located directly below the command center, the **Live Integration Monitor** provides real-time visibility into the low-level asynchronous messaging stream powering the system.
+
 ![HMI former live integrator monitor shot](assets/initial-hmi-dashboard-3.png)
 
-### Commissioning Mode Demo
+* **Topic Telemetry Stream:** Inspects live JSON payloads published over MQTT topics (e.g., `warehouse/robot/state`, `warehouse/tasks/new`, `warehouse/events/sensor`).
+* **Timestamped Audit Trail:** Logs state changes (*IDLE*, *DOCKED*, *MOVING*), task dispatch IDs, customer metadata, and broker connection status.
 
-Site-validation flow, with readiness checks, diagnostics, and the operational confidence loop before release.
+---
 
-[Open commissioning-mode-demo.mp4](assets/commissioning-mode-demo.mp4)
+### 3. Commissioning Mode Demo
+Site-validation flow, featuring readiness checks, automated hardware diagnostics, and operational confidence loops prior to deployment.
 
-### 2D Initial Demo (WIP)
+[Play Commissioning Mode Demo](https://github.com/user-attachments/assets/06298d6f-fe84-4409-be01-4855f2776dd7)
+
+---
+
+### 4. 2D Initial Demo (WIP)
 
 Live floor-map view showing robot movement, dock activity, and telemetry updates in real time.
+ 
+[Watch 2D Demo](https://github.com/user-attachments/assets/54c7c899-2b88-4a55-83bf-cd981b5c87fb)
 
-[Open 2D-demo.mp4](assets/2D-demo.mp4)
+---
 
-### 3D Initial Demo (WIP)
+### 5. 3D Initial Demo (WIP)
 
 Immersive twin view with spatial context and a more cinematic sense of scale.
 
-[Open 3D-demo.mp4](assets/3D-demo.mp4)
+[Watch 3D Demo](https://github.com/user-attachments/assets/4e41f7b3-46c0-4e01-9eb8-b886377e13d2)
+
+---
 
 ## Architecture
 
@@ -164,6 +192,7 @@ The repository keeps two active user interfaces on `main`:
 
 ```text
 warehouse-integration-simulator/
+├── assets
 ├── database/
 │   ├── 01_schemas.sql
 │   ├── 02_erp_schema.sql
