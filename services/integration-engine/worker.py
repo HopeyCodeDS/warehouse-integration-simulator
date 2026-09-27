@@ -100,7 +100,10 @@ def process_order_completed(data, db):
 def run_loop():
     db = SessionLocal()
     try:
-        for event in db.query(IntegrationEvent).filter(IntegrationEvent.status == "PENDING").all():
+        for event in (db.query(IntegrationEvent)
+                        .filter(IntegrationEvent.status == "PENDING",
+                                IntegrationEvent.event_type == "ORDER_CREATED")
+                        .all()):
             try:
                 process_order_created(event, db)
             except Exception as e:
@@ -109,8 +112,12 @@ def run_loop():
             db.commit()
 
         while not completion_queue.empty():
-            process_order_completed(completion_queue.get(), db)
-            db.commit()
+            try:
+                process_order_completed(completion_queue.get(), db)
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                print(f"[Engine] Error handling completion: {e}")
     finally:
         db.close()
 
