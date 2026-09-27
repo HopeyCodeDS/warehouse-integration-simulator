@@ -1,13 +1,12 @@
 .DEFAULT_GOAL := help
 
 COMPOSE := docker compose
-V2_DIR := frontend/wis-digital-Twin-v2
 REALISTIC_DIR := frontend/realistic-wis-hmi
 ERP_URL := http://localhost:8000
 COMMISSIONING_URL := http://localhost:8002
 MQTT_HOST := localhost
 
-.PHONY: help setup install frontend-install frontend-realistic-install build build-v2 build-realistic lint lint-v2 lint-realistic validate e2e traffic-test up down restart stop logs logs-robots health mqtt order order-realistic clean
+.PHONY: help setup install frontend-install build build-realistic lint lint-realistic validate e2e traffic-test up down restart stop logs logs-robots health mqtt order order-realistic clean
 
 help: ## Show available project commands
 	@echo WIS Warehouse Integration Simulator
@@ -18,9 +17,7 @@ help: ## Show available project commands
 	@echo   restart                Rebuild and restart the Docker simulation stack
 	@echo   logs                   Follow all Docker service logs
 	@echo   logs-robots            Follow all four AMR simulator logs
-	@echo   build-v2               Build the v2 frontend
 	@echo   build-realistic       Build the realistic HMI frontend
-	@echo   lint-v2                Lint authored v2 source
 	@echo   lint-realistic        Lint realistic HMI source
 	@echo   traffic-test          Run traffic reservation and collision tests
 	@echo   validate               Run frontend, Python, and Compose checks
@@ -28,33 +25,24 @@ help: ## Show available project commands
 	@echo   health                 Query the commissioning health endpoint
 	@echo   mqtt                   Subscribe to robot telemetry
 	@echo   order                  Create a sample ERP order
-	@echo   clean                  Remove v2 build output and Python caches
+	@echo   clean                  Remove frontend build output and Python caches
 
-setup: ## Prepare the local environment and install v2 frontend dependencies
+setup: ## Prepare the local environment and install frontend dependencies
 	@if not exist .env copy .env.example .env
 	$(MAKE) frontend-install
 	$(COMPOSE) config --quiet
 
 install: setup ## Alias for setup
 
-frontend-install: ## Install v2 frontend dependencies
-	cd $(V2_DIR) && npm install
-
-frontend-realistic-install: ## Install realistic HMI dependencies
+frontend-install: ## Install realistic HMI dependencies
 	cd $(REALISTIC_DIR) && npm install
 
-build: build-v2 ## Build the v2 frontend
-
-build-v2: ## Create a production build of the v2 frontend
-	cd $(V2_DIR) && npm run build
+build: build-realistic ## Build the realistic HMI frontend
 
 build-realistic: ## Create a production build of the realistic HMI frontend
 	cd $(REALISTIC_DIR) && npm run build
 
-lint: lint-v2 ## Lint the v2 frontend source
-
-lint-v2: ## Lint authored v2 source files
-	cd $(V2_DIR) && npx oxlint src
+lint: lint-realistic ## Lint the realistic HMI frontend source
 
 lint-realistic: ## Lint realistic HMI source files
 	cd $(REALISTIC_DIR) && npm run lint
@@ -111,5 +99,5 @@ order-realistic: ## Create an in-stock order for the realistic task route
 	@echo.
 
 clean: ## Remove frontend build output and Python caches
-	-if exist "$(V2_DIR)\dist" rmdir /s /q "$(V2_DIR)\dist"
+	-if exist "$(REALISTIC_DIR)\dist" rmdir /s /q "$(REALISTIC_DIR)\dist"
 	-for /d /r services %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d"
