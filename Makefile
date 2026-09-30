@@ -6,7 +6,7 @@ ERP_URL := http://localhost:8000
 COMMISSIONING_URL := http://localhost:8002
 MQTT_HOST := localhost
 
-.PHONY: help setup install frontend-install build build-realistic lint lint-realistic validate e2e traffic-test up down restart stop logs logs-robots health mqtt order order-realistic clean
+.PHONY: help setup install frontend-install build build-realistic lint lint-realistic validate unit e2e traffic-test up down restart stop logs logs-robots health mqtt order order-realistic clean
 
 help: ## Show available project commands
 	@echo WIS Warehouse Integration Simulator
@@ -19,6 +19,7 @@ help: ## Show available project commands
 	@echo   logs-robots            Follow all four AMR simulator logs
 	@echo   build-realistic       Build the realistic HMI frontend
 	@echo   lint-realistic        Lint realistic HMI source
+	@echo   unit                   Run service unit tests without the Docker stack
 	@echo   traffic-test          Run traffic reservation and collision tests
 	@echo   validate               Run frontend, Python, and Compose checks
 	@echo   e2e                    Run order-flow tests against the running stack
@@ -51,10 +52,19 @@ validate: ## Run frontend, Python, and Compose validation
 	$(MAKE) lint-realistic
 	$(MAKE) build-realistic
 	python -m py_compile services/robot-simulator/worker.py services/robot-simulator/simulation.py services/wms-api/app/main.py services/opcua-plc-simulator/server.py services/opcua-gateway/gateway.py services/traffic-manager/manager.py services/simulation-control/manager.py
-	python -m unittest tests/test_simulation_contract.py tests/test_traffic_manager.py tests/test_simulation_control.py -v
+	$(MAKE) unit
 	python -m py_compile services/integration-engine/worker.py
 	$(COMPOSE) config --quiet
 	cd $(REALISTIC_DIR) && npm run test:e2e
+
+unit: ## Run the service unit tests; no Docker stack required
+	python -m unittest -v \
+		tests/test_wms_allocation.py \
+		tests/test_outbox_processing.py \
+		tests/test_robot_routing.py \
+		tests/test_simulation_contract.py \
+		tests/test_traffic_manager.py \
+		tests/test_simulation_control.py
 
 traffic-test: ## Run deterministic traffic reservation tests
 	python -m unittest tests/test_traffic_manager.py -v
