@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-# Shared world coordinates match frontend/realistic-wis-hmi/src/data.js.
+# Shared world coordinates match frontend.
 WORLD_WIDTH = 32.0
 WORLD_DEPTH = 18.0
 LEGACY_WIDTH = 980.0
