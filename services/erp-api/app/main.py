@@ -55,6 +55,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Order number already exists")
 
     # 2. Create the Order
+    correlation_id = str(uuid.uuid4())
     new_order = models.Order(
         order_number=order.order_number,
         correlation_id=correlation_id,
@@ -76,7 +77,6 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
         db.add(new_item)
         items_payload.append({"sku": item.product_sku, "qty": item.requested_qty})
 
-    correlation_id = str(uuid.uuid4())
     event_payload = json.dumps({
         "correlation_id": correlation_id,
         "order_number": order.order_number,
