@@ -5,7 +5,6 @@ This directory contains the durable technical record for the Warehouse Integrati
 ## Start Here
 
 - [Project Engineering Log](PROJECT-LOG.md): append-only record of implementation work, decisions, validation, and known blockers.
-- [Realistic IT/OT Simulation Plan](../real-simulation.md): architecture and phased implementation plan for the realistic simulation.
 - [FAT](FAT.md): factory acceptance testing.
 - [SAT](SAT.md): site acceptance testing.
 - [Architecture Decision Records](adr/): durable decisions and their consequences.
@@ -15,7 +14,7 @@ This directory contains the durable technical record for the Warehouse Integrati
 - [Operator dashboard](../frontend/react-dashboard): command, monitoring, and live integration logs.
 - [Realistic HMI](../frontend/realistic-wis-hmi): warehouse floor visualization and telemetry view.
 
-The older `frontend/digital-twin` and `frontend/wis-digital-Twin-v2` UIs are being retired so the main branch stays focused and easier to merge.
+`frontend/wis-digital-Twin-v2` has been removed. `frontend/digital-twin` is still present but is no longer maintained and is not referenced by any `make` target.
 
 ## Documentation Rules
 
@@ -39,4 +38,5 @@ Copy [templates/IMPLEMENTATION-NOTE.md](templates/IMPLEMENTATION-NOTE.md) into a
 - MQTT WebSocket: `ws://localhost:9001`
 - OPC UA PLC: `opc.tcp://localhost:4840/freeopcua/server/`
 - Primary validation: `make validate`
-- Full order-flow test: `make e2e`
+- Service unit tests, no stack required: `make unit`
+- Full order-flow test, requires the running stack: `make e2e`
