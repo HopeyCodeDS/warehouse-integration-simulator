@@ -10,11 +10,16 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
+.deepeval/
 
 # Node/React
 node_modules/
 build/
 dist/
+
+# Local planning scratch
+git-issues-qwen.md
 
 # IDEs
 .vscode/
