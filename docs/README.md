@@ -40,3 +40,4 @@ Copy [templates/IMPLEMENTATION-NOTE.md](templates/IMPLEMENTATION-NOTE.md) into a
 - Primary validation: `make validate`
 - Service unit tests, no stack required: `make unit`
 - Full order-flow test, requires the running stack: `make e2e`
+- Continuous integration: [.github/workflows/ci.yml](../.github/workflows/ci.yml) runs the unit suites, `docker compose config`, and the HMI lint and build on every push and pull request

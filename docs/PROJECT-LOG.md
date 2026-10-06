@@ -2,6 +2,90 @@
 
 This is the append-only technical record for implementation work in the Warehouse Integration Simulator. Add the newest entry at the top. Keep entries concise but concrete enough to reconstruct why a change exists and how it was verified.
 
+## 2026-10-06 - Continuous Integration and Makefile Shell Repair
+
+### Intent
+
+Close WIS-081 by running the existing checks on every push and pull request, and
+repair `make`, which could not execute its own recipes on a developer machine
+with Git Bash installed.
+
+### Scope and Ownership
+
+Repository infrastructure. No service runtime behavior changes.
+
+### Files and Services Changed
+
+- [CI workflow](../.github/workflows/ci.yml)
+- [Pull request template](../.github/pull_request_template.md)
+- [Makefile](../Makefile)
+- [.gitignore](../.gitignore)
+
+### Behavior and Contracts
+
+Three CI jobs run on pushes to `main` and `develop` and on every pull request:
+
+- **Python services** — byte-compiles all ten service entrypoints, then runs the
+  six stack-free unit suites (54 tests).
+- **Compose manifest** — seeds `.env` from `.env.example` and runs
+  `docker compose config --quiet`.
+- **Realistic HMI** — `npm ci`, `npm run lint`, `npm run build`.
+
+Playwright e2e stays out of CI because it needs the running stack; `make e2e`
+remains the local gate for that.
+
+The Python job installs `services/wms-api/requirements.txt` and
+`services/integration-engine/requirements.txt`. Only `paho-mqtt` is stubbed in
+[tests/support.py](../tests/support.py); `test_wms_allocation` imports the real
+WMS app and `test_outbox_processing` the real integration worker, so FastAPI,
+SQLAlchemy, `pydantic-settings` and `requests` must be installed. Pointing CI at
+the service requirements keeps it on the same pins as the containers.
+
+`make` now pins `SHELL` to `cmd.exe` under a `Windows_NT` guard. Every recipe is
+written in Windows shell syntax (`copy`, `if not exist`, `rmdir /s /q`, `echo.`),
+but GNU Make resolves `SHELL` to `/bin/bash.exe` when Git Bash is on `PATH`, so
+those recipes died with `CreateProcess(NULL, echo., ...) failed` — `make help`
+was unusable. The `up-infra` target was removed: it was byte-identical to `up`,
+and its "without the frontend" description was wrong, as no frontend service
+exists in [docker-compose.yml](../docker-compose.yml).
+
+### Validation
+
+```text
+make help          # previously failed with CreateProcess ... e=2
+make unit          # Ran 54 tests, OK
+```
+
+The dependency set was confirmed against a clean virtual environment holding
+only the two requirement files above: 54 tests, OK. The first CI run had failed
+with `ModuleNotFoundError: No module named 'fastapi'` and `'requests'`, which is
+what prompted the install step.
+
+### Known Limitations
+
+- CI does not exercise the stack, so FAT-02 through FAT-04 and the SAT scenarios
+  are still manual.
+- The Makefile is now explicitly Windows-only on Windows hosts; a POSIX host
+  falls through to the default shell and the `copy`/`rmdir` recipes remain
+  unportable.
+- `[Simulation] Invalid command: ...` still prints after the unit test summary.
+  It escapes `silence_stdout` on a teardown path and does not affect exit codes.
+
+### Follow-up Work
+
+- Narrow `make e2e`, which currently discovers all of `tests/` and so re-runs the
+  six stack-free suites alongside the stack-dependent order-flow test.
+- Add Dependabot for the three npm workspaces and the eight `requirements.txt`
+  files.
+
+### Rollback or Recovery Notes
+
+All changes are additive or configuration-only and revert cleanly with
+`git revert`. Deleting `.github/workflows/ci.yml` disables CI; reverting the
+Makefile `SHELL` block restores the previous (broken) shell selection.
+
+---
+
 ## 2026-10-02 - Order Flow Repair, Service Unit Tests, and Schema Drift Discovery
 
 ### Intent
