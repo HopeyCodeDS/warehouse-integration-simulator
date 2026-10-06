@@ -10,6 +10,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
+.deepeval/
 
 # Node/React
 node_modules/

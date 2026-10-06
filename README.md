@@ -316,6 +316,12 @@ make e2e
 
 The test creates a uniquely named ERP order and waits for it to reach `COMPLETED`. This exercises the ERP API, transactional outbox, integration engine, WMS allocation, MQTT task dispatch, robot simulator, WMS completion handler, and ERP status callback. The default timeout is 90 seconds and can be changed with `E2E_TIMEOUT_SECONDS`.
 
+The service unit tests need no Docker stack and run in well under a second:
+
+```bash
+make unit
+```
+
 ### 5. Stop the stack
 
 When you are done, stop the containers with:
@@ -351,6 +357,9 @@ This project is intentionally simplified so the architecture stays readable and 
 
 - an authoritative simulation clock that can pause, resume, or step every backend process in lockstep
 - full historical replay that can reconstruct a completed run from ordered simulation events and ticks
+- a schema migration path; the files in `database/` are applied by Postgres only when the data directory is empty, so a schema change never reaches a volume that already exists
+
+The migration gap is the one most likely to affect you in practice. If you have run the stack before and then pull a change that alters the schema, the services will fail against the stale tables. Until migrations are in place, recover with `docker compose down -v` followed by `make up`, which recreates the volume and reseeds it. That command destroys the existing simulation data.
 
 The current `services/simulation-control/manager.py` service is a lightweight control plane for simulation state, not a global time source. Robots, the PLC simulator, and integration workers still advance on their own loops, so the simulation remains operationally useful but not yet deterministic in the replayable sense described above.
 

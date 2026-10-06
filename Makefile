@@ -1,5 +1,13 @@
 .DEFAULT_GOAL := help
 
+# Recipes use Windows shell builtins (copy, if not exist, rmdir, echo.), so pin
+# cmd.exe. Without this, make picks Git Bash when it is on PATH and every such
+# recipe fails with "CreateProcess ... failed".
+ifeq ($(OS),Windows_NT)
+SHELL := cmd.exe
+.SHELLFLAGS := /C
+endif
+
 COMPOSE := docker compose
 REALISTIC_DIR := frontend/realistic-wis-hmi
 ERP_URL := http://localhost:8000
@@ -17,15 +25,16 @@ help: ## Show available project commands
 	@echo   restart                Rebuild and restart the Docker simulation stack
 	@echo   logs                   Follow all Docker service logs
 	@echo   logs-robots            Follow all four AMR simulator logs
-	@echo   build-realistic       Build the realistic HMI frontend
-	@echo   lint-realistic        Lint realistic HMI source
+	@echo   build-realistic        Build the realistic HMI frontend
+	@echo   lint-realistic         Lint realistic HMI source
 	@echo   unit                   Run service unit tests without the Docker stack
-	@echo   traffic-test          Run traffic reservation and collision tests
+	@echo   traffic-test           Run traffic reservation and collision tests
 	@echo   validate               Run frontend, Python, and Compose checks
 	@echo   e2e                    Run order-flow tests against the running stack
 	@echo   health                 Query the commissioning health endpoint
 	@echo   mqtt                   Subscribe to robot telemetry
 	@echo   order                  Create a sample ERP order
+	@echo   order-realistic        Create an in-stock order for the realistic route
 	@echo   clean                  Remove frontend build output and Python caches
 
 setup: ## Prepare the local environment and install frontend dependencies
@@ -73,9 +82,6 @@ e2e: ## Run order-flow tests against the running stack
 	python -m unittest discover -s tests -p "test_*.py" -v
 
 up: ## Start the complete Docker simulation stack
-	$(COMPOSE) up -d --build
-
-up-infra: ## Start Docker services without the frontend
 	$(COMPOSE) up -d --build
 
 down: ## Stop and remove the Docker simulation stack

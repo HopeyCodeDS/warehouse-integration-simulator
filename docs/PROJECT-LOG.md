@@ -2,6 +2,72 @@
 
 This is the append-only technical record for implementation work in the Warehouse Integration Simulator. Add the newest entry at the top. Keep entries concise but concrete enough to reconstruct why a change exists and how it was verified.
 
+## 2026-10-02 - Order Flow Repair, Service Unit Tests, and Schema Drift Discovery
+
+### Intent
+
+Repair the order-creation path, which was failing on every request, and establish per-service unit coverage so defects of this class are caught without a running stack.
+
+### Scope and Ownership
+
+ERP API owns order creation and the outbox write. The integration engine owns outbox polling and completion handling. The robot simulator owns route generation. The tests are repository-level and own none of the runtime behavior.
+
+### Files and Services Changed
+
+- [ERP API](../services/erp-api/app/main.py)
+- [Integration engine worker](../services/integration-engine/worker.py)
+- [WMS allocation tests](../tests/test_wms_allocation.py)
+- [Outbox processing tests](../tests/test_outbox_processing.py)
+- [Robot routing tests](../tests/test_robot_routing.py)
+- [Shared test doubles](../tests/support.py)
+- [Repository commands](../Makefile)
+
+### Behavior and Contracts
+
+- `create_order` referenced `correlation_id` before assigning it. Python scopes the name local to the function, so every `POST /api/orders` raised `UnboundLocalError` and returned 500. The assignment now precedes the `Order` construction, and one identifier reaches both the order row and the outbox event.
+- The outbox poller now filters on `event_type == "ORDER_CREATED"`. It previously passed every `PENDING` row to `process_order_created` and worked only because no other producer wrote `PENDING`.
+- The completion loop now handles each message independently with a rollback. A malformed payload or an ERP timeout previously raised out of `run_loop`, past the `while True` in `__main__`, and terminated the worker permanently.
+- `make unit` runs the service unit tests with no Docker stack. `make validate` now calls it instead of a hardcoded three-file list.
+- Unit tests are hermetic: `tests/support.py` stubs `paho.mqtt.client` and seeds dummy credentials, because both service modules build engines and MQTT clients at import time. `FakeSession` interprets real SQLAlchemy criteria against seeded rows, so allocation tests exercise the `quantity >= qty` predicate rather than a canned result.
+
+### Validation
+
+```text
+make unit          54 tests, no stack required
+make e2e           56 tests including 2 end-to-end, against the live stack
+```
+
+A live order completed the full loop and the audit trail carried one correlation ID across every hop:
+
+```text
+ORD-E2E-44D234CC5347  COMPLETED
+ORDER_CREATED    ERP                -> Integration_Engine   PROCESSED
+TASK_DISPATCHED  Integration_Engine -> WMS                  PROCESSED
+ORDER_COMPLETED  WMS                -> ERP                  PROCESSED
+```
+
+### Known Limitations
+
+- **Schema drift on persisted volumes.** The first `make e2e` run failed with `column orders.correlation_id does not exist`. The `correlation_id` columns are declared in `database/*.sql`, but Postgres only executes `docker-entrypoint-initdb.d` against an empty data directory, so a volume predating that change never received them. All three tables were affected. Recovery required `docker compose down -v`, which destroys simulation data. This repeats the failure recorded as WIS-009 and is the concrete case for Alembic migrations (WIS-079).
+- Emoji banners in service `print()` calls raise `UnicodeEncodeError` when stdout is a cp1252 console. Inside Docker this is harmless, but the integration engine's own `except` swallows it and marks the event `ERROR`, so outbox state is corrupted silently. Tests redirect stdout to work around it.
+- A failed outbox event is marked `ERROR` and dropped. There is still no retry or backoff.
+- No unit tests exist for the ERP service itself; `create_order` is covered only by the end-to-end test.
+- FAT-02 through FAT-04 and all SAT scenarios remain unexecuted.
+
+### Follow-up Work
+
+- Replace `init.sql` with Alembic migrations so schema changes reach existing volumes (WIS-079).
+- Replace `print()` with the `logging` module across services and drop the emoji banners.
+- Add retry and backoff for failed outbox events, distinguishing transient from permanent failures.
+- Add GitHub Actions CI running `make unit` (WIS-081).
+- Add ERP service unit tests covering `create_order` and the outbox write.
+
+### Rollback or Recovery Notes
+
+The code changes are additive and revert cleanly with `git revert`. The volume reset performed during validation is not reversible; a fresh `make up` reseeds inventory from `database/05_seed_data.sql`.
+
+---
+
 ## 2026-09-21 - README Scope and Backlog Clarification
 
 ### Intent

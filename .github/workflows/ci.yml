@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  python:
+    name: Python services
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            services/wms-api/requirements.txt
+            services/integration-engine/requirements.txt
+
+      - name: Install the dependencies the unit tests import for real
+        # tests/support.py stubs paho-mqtt, but test_wms_allocation imports the
+        # real wms-api app and test_outbox_processing the real integration
+        # worker, so FastAPI, SQLAlchemy, pydantic-settings and requests have to
+        # be present. Installing the service requirements keeps CI on the same
+        # pins as the containers.
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            -r services/wms-api/requirements.txt \
+            -r services/integration-engine/requirements.txt
+
+      - name: Byte-compile every service entrypoint
+        run: |
+          python -m py_compile \
+            services/erp-api/app/main.py \
+            services/wms-api/app/main.py \
+            services/integration-engine/worker.py \
+            services/robot-simulator/worker.py \
+            services/robot-simulator/simulation.py \
+            services/opcua-plc-simulator/server.py \
+            services/opcua-gateway/gateway.py \
+            services/traffic-manager/manager.py \
+            services/simulation-control/manager.py \
+            services/commissioning-api/main.py
+
+      - name: Unit tests
+        run: |
+          python -m unittest -v \
+            tests/test_wms_allocation.py \
+            tests/test_outbox_processing.py \
+            tests/test_robot_routing.py \
+            tests/test_simulation_contract.py \
+            tests/test_traffic_manager.py \
+            tests/test_simulation_control.py
+
+  compose:
+    name: Compose manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Seed environment
+        run: cp .env.example .env
+
+      - name: Validate docker-compose.yml
+        run: docker compose config --quiet
+
+  frontend:
+    name: Realistic HMI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/realistic-wis-hmi
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/realistic-wis-hmi/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run build
