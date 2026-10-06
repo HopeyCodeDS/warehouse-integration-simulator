@@ -15,6 +15,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            services/wms-api/requirements.txt
+            services/integration-engine/requirements.txt
+
+      - name: Install the dependencies the unit tests import for real
+        # tests/support.py stubs paho-mqtt, but test_wms_allocation imports the
+        # real wms-api app and test_outbox_processing the real integration
+        # worker, so FastAPI, SQLAlchemy, pydantic-settings and requests have to
+        # be present. Installing the service requirements keeps CI on the same
+        # pins as the containers.
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            -r services/wms-api/requirements.txt \
+            -r services/integration-engine/requirements.txt
 
       - name: Byte-compile every service entrypoint
         run: |
