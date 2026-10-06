@@ -2,6 +2,7 @@
 
 <div align="center">
 
+  [![CI Pipeline](https://github.com)](https://github.com)
   [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
   [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](services/erp-api/)
   [![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)](frontend/react-dashboard/)
@@ -321,6 +322,11 @@ The service unit tests need no Docker stack and run in well under a second:
 ```bash
 make unit
 ```
+
+These same unit suites, the Compose manifest check, and the HMI lint and build
+run automatically on every push and pull request via
+[.github/workflows/ci.yml](.github/workflows/ci.yml). The end-to-end flow above
+stays local, since it needs the running stack.
 
 ### 5. Stop the stack
 
