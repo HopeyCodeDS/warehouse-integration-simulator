@@ -73,7 +73,6 @@ what prompted the install step.
 
 ### Follow-up Work
 
-- Add a CI badge to the root README once the workflow has run on `main`.
 - Narrow `make e2e`, which currently discovers all of `tests/` and so re-runs the
   six stack-free suites alongside the stack-dependent order-flow test.
 - Add Dependabot for the three npm workspaces and the eight `requirements.txt`

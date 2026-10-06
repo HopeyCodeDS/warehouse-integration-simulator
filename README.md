@@ -2,7 +2,7 @@
 
 <div align="center">
 
-  [![CI Pipeline](https://github.com)](https://github.com)
+  [![CI](https://img.shields.io/github/actions/workflow/status/HopeyCodeDS/warehouse-integration-simulator/ci.yml?branch=main&style=flat-square&label=CI&logo=githubactions&logoColor=white)](https://github.com/HopeyCodeDS/warehouse-integration-simulator/actions/workflows/ci.yml)
   [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
   [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](services/erp-api/)
   [![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)](frontend/react-dashboard/)
